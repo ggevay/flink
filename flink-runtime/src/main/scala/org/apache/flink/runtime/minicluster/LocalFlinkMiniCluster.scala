@@ -382,11 +382,17 @@ class LocalFlinkMiniCluster(
       // compute the memory size per task manager. we assume equally much memory for
       // each TaskManagers and each JobManager
       memorySize /= numTaskManager + 1 // the +1 is the job manager
+      ////memorySize /= numTaskManager //gg
 
       // for each TaskManager, subtract the memory needed for network memory buffers
       memorySize -= TaskManagerServices.calculateNetworkBufferMemory(memorySize, config)
       memorySize = (memorySize * memoryFraction).toLong
       memorySize >>= 20 // bytes to megabytes
+
+      //
+      //memorySize -= 128 //gg
+      //
+
       config.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, memorySize)
     }
   }
