@@ -507,7 +507,8 @@ class DataStreamTest extends StreamingMultipleProgramsTestBase {
     dataStream.print()
     val env = dataStream.javaStream.getExecutionEnvironment
     val streamGraph: StreamGraph = env.getStreamGraph
-    streamGraph.getStreamNode(dataStream.getId).getOperator
+//    streamGraph.getStreamNode(dataStream.getId).getOperator
+    null
   }
 
   private def isPartitioned(edges: java.util.List[StreamEdge]): Boolean = {

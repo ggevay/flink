@@ -326,6 +326,7 @@ public class StreamingJobGraphGenerator {
 		config.setVertexID(vertexID);
 		config.setBufferTimeout(vertex.getBufferTimeout());
 
+		config.setInputSerializers(vertex.getInputSerializers());
 		config.setTypeSerializerIn1(vertex.getTypeSerializerIn1());
 		config.setTypeSerializerIn2(vertex.getTypeSerializerIn2());
 		config.setTypeSerializerOut(vertex.getTypeSerializerOut());
@@ -415,22 +416,23 @@ public class StreamingJobGraphGenerator {
 	}
 
 	private boolean isChainable(StreamEdge edge) {
-		StreamNode upStreamVertex = edge.getSourceVertex();
-		StreamNode downStreamVertex = edge.getTargetVertex();
-
-		StreamOperator<?> headOperator = upStreamVertex.getOperator();
-		StreamOperator<?> outOperator = downStreamVertex.getOperator();
-
-		return downStreamVertex.getInEdges().size() == 1
-				&& outOperator != null
-				&& headOperator != null
-				&& upStreamVertex.isSameSlotSharingGroup(downStreamVertex)
-				&& outOperator.getChainingStrategy() == ChainingStrategy.ALWAYS
-				&& (headOperator.getChainingStrategy() == ChainingStrategy.HEAD ||
-					headOperator.getChainingStrategy() == ChainingStrategy.ALWAYS)
-				&& (edge.getPartitioner() instanceof ForwardPartitioner)
-				&& upStreamVertex.getParallelism() == downStreamVertex.getParallelism()
-				&& streamGraph.isChainingEnabled();
+		return false;
+//		StreamNode upStreamVertex = edge.getSourceVertex();
+//		StreamNode downStreamVertex = edge.getTargetVertex();
+//
+//		StreamOperator<?> headOperator = upStreamVertex.getOperator();
+//		StreamOperator<?> outOperator = downStreamVertex.getOperator();
+//
+//		return downStreamVertex.getInEdges().size() == 1
+//				&& outOperator != null
+//				&& headOperator != null
+//				&& upStreamVertex.isSameSlotSharingGroup(downStreamVertex)
+//				&& outOperator.getChainingStrategy() == ChainingStrategy.ALWAYS
+//				&& (headOperator.getChainingStrategy() == ChainingStrategy.HEAD ||
+//					headOperator.getChainingStrategy() == ChainingStrategy.ALWAYS)
+//				&& (edge.getPartitioner() instanceof ForwardPartitioner)
+//				&& upStreamVertex.getParallelism() == downStreamVertex.getParallelism()
+//				&& streamGraph.isChainingEnabled();
 	}
 
 	private void setSlotSharing() {

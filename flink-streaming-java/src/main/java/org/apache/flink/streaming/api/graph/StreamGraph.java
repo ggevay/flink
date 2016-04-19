@@ -47,6 +47,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.OutputTypeConfigurable;
 import org.apache.flink.streaming.api.operators.StoppableStreamSource;
 import org.apache.flink.streaming.api.operators.StreamOperator;
+import org.apache.flink.streaming.api.operators.StreamOperatorNG;
 import org.apache.flink.streaming.api.operators.StreamSource;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.runtime.state.AbstractStateBackend;
@@ -55,6 +56,7 @@ import org.apache.flink.streaming.runtime.partitioner.ForwardPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.RebalancePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTask;
+import org.apache.flink.streaming.runtime.tasks.OperatorStreamTask;
 import org.apache.flink.streaming.runtime.tasks.SourceStreamTask;
 import org.apache.flink.streaming.runtime.tasks.StoppableSourceStreamTask;
 import org.apache.flink.streaming.runtime.tasks.StreamIterationHead;
@@ -219,6 +221,32 @@ public class StreamGraph extends StreamingPlan {
 		}
 	}
 
+	public <OUT> void addOperator(
+			Integer vertexID,
+			String slotSharingGroup,
+			StreamOperatorNG<OUT> operatorObject,
+			TypeInformation<OUT> outTypeInfo,
+			String operatorName) {
+
+		addNode(vertexID, slotSharingGroup, OperatorStreamTask.class, operatorObject, operatorName);
+
+		TypeSerializer<OUT> outSerializer = outTypeInfo != null && !(outTypeInfo instanceof MissingTypeInfo) ? outTypeInfo.createSerializer(executionConfig) : null;
+
+		setOutputSerializer(vertexID, outSerializer);
+
+		if (operatorObject instanceof OutputTypeConfigurable) {
+			@SuppressWarnings("unchecked")
+			OutputTypeConfigurable<OUT> outputTypeConfigurable = (OutputTypeConfigurable<OUT>) operatorObject;
+			// sets the output type which must be know at StreamGraph creation time
+			outputTypeConfigurable.setOutputType(outTypeInfo, executionConfig);
+		}
+
+		if (LOG.isDebugEnabled()) {
+			LOG.debug("Vertex: {}", vertexID);
+		}
+	}
+
+
 	public <IN1, IN2, OUT> void addCoOperator(
 			Integer vertexID,
 			String slotSharingGroup,
@@ -269,6 +297,30 @@ public class StreamGraph extends StreamingPlan {
 
 		return vertex;
 	}
+
+	protected StreamNode addNode(Integer vertexID,
+			String slotSharingGroup,
+			Class<? extends AbstractInvokable> vertexClass,
+			StreamOperatorNG<?> operatorObject,
+			String operatorName) {
+
+		if (streamNodes.containsKey(vertexID)) {
+			throw new RuntimeException("Duplicate vertexID " + vertexID);
+		}
+
+		StreamNode vertex = new StreamNode(environment,
+				vertexID,
+				slotSharingGroup,
+				operatorObject,
+				operatorName,
+				new ArrayList<OutputSelector<?>>(),
+				vertexClass);
+
+		streamNodes.put(vertexID, vertex);
+
+		return vertex;
+	}
+
 
 	/**
 	 * Adds a new virtual node that is used to connect a downstream vertex to only the outputs
@@ -328,6 +380,65 @@ public class StreamGraph extends StreamingPlan {
 		}
 	}
 
+	public void addEdge(Integer upStreamVertexID, Integer downStreamVertexID, StreamOperatorNG.Input<?> input) {
+		addEdgeInternal(upStreamVertexID,
+				downStreamVertexID,
+				input,
+				null,
+				new ArrayList<String>());
+
+	}
+
+	private void addEdgeInternal(Integer upStreamVertexID,
+			Integer downStreamVertexID,
+			StreamOperatorNG.Input<?> input,
+			StreamPartitioner<?> partitioner,
+			List<String> outputNames) {
+
+
+		if (virtualSelectNodes.containsKey(upStreamVertexID)) {
+			int virtualId = upStreamVertexID;
+			upStreamVertexID = virtualSelectNodes.get(virtualId).f0;
+			if (outputNames.isEmpty()) {
+				// selections that happen downstream override earlier selections
+				outputNames = virtualSelectNodes.get(virtualId).f1;
+			}
+			addEdgeInternal(upStreamVertexID, downStreamVertexID, input, partitioner, outputNames);
+		} else if (virtuaPartitionNodes.containsKey(upStreamVertexID)) {
+			int virtualId = upStreamVertexID;
+			upStreamVertexID = virtuaPartitionNodes.get(virtualId).f0;
+			if (partitioner == null) {
+				partitioner = virtuaPartitionNodes.get(virtualId).f1;
+			}
+			addEdgeInternal(upStreamVertexID, downStreamVertexID, input, partitioner, outputNames);
+		} else {
+			StreamNode upstreamNode = getStreamNode(upStreamVertexID);
+			StreamNode downstreamNode = getStreamNode(downStreamVertexID);
+
+			// If no partitioner was specified and the parallelism of upstream and downstream
+			// operator matches use forward partitioning, use rebalance otherwise.
+			if (partitioner == null && upstreamNode.getParallelism() == downstreamNode.getParallelism()) {
+				partitioner = new ForwardPartitioner<Object>();
+			} else if (partitioner == null) {
+				partitioner = new RebalancePartitioner<Object>();
+			}
+
+			if (partitioner instanceof ForwardPartitioner) {
+				if (upstreamNode.getParallelism() != downstreamNode.getParallelism()) {
+					throw new UnsupportedOperationException("Forward partitioning does not allow " +
+							"change of parallelism. Upstream operation: " + upstreamNode + " parallelism: " + upstreamNode.getParallelism() +
+							", downstream operation: " + downstreamNode + " parallelism: " + downstreamNode.getParallelism() +
+							" You must use another partitioning strategy, such as broadcast, rebalance, shuffle or global.");
+				}
+			}
+
+			StreamEdge edge = new StreamEdge(upstreamNode, downstreamNode, input, outputNames, partitioner);
+
+			getStreamNode(edge.getSourceId()).addOutEdge(edge);
+			getStreamNode(edge.getTargetId()).addInEdge(edge);
+		}
+	}
+
 	public void addEdge(Integer upStreamVertexID, Integer downStreamVertexID, int typeNumber) {
 		addEdgeInternal(upStreamVertexID,
 				downStreamVertexID,
@@ -336,6 +447,7 @@ public class StreamGraph extends StreamingPlan {
 				new ArrayList<String>());
 
 	}
+
 
 	private void addEdgeInternal(Integer upStreamVertexID,
 			Integer downStreamVertexID,
@@ -445,6 +557,18 @@ public class StreamGraph extends StreamingPlan {
 		}
 	}
 
+	public void setInputSerializer(Integer vertexID, StreamOperatorNG.Input<?> input, TypeSerializer<?> serializer) {
+		StreamNode vertex = getStreamNode(vertexID);
+		vertex.setInputSerializer(input, serializer);
+	}
+
+	public <T> void setOutputSerializer(Integer vertexID, TypeSerializer<T> serializer) {
+		StreamNode vertex = getStreamNode(vertexID);
+		vertex.setSerializerOut(serializer);
+	}
+
+
+
 	public void setSerializers(Integer vertexID, TypeSerializer<?> in1, TypeSerializer<?> in2, TypeSerializer<?> out) {
 		StreamNode vertex = getStreamNode(vertexID);
 		vertex.setSerializerIn1(in1);
@@ -516,15 +640,6 @@ public class StreamGraph extends StreamingPlan {
 		return streamNodes.values();
 	}
 
-	public Set<Tuple2<Integer, StreamOperator<?>>> getOperators() {
-		Set<Tuple2<Integer, StreamOperator<?>>> operatorSet = new HashSet<>();
-		for (StreamNode vertex : streamNodes.values()) {
-			operatorSet.add(new Tuple2<Integer, StreamOperator<?>>(vertex.getId(), vertex
-					.getOperator()));
-		}
-		return operatorSet;
-	}
-
 	public String getBrokerID(Integer vertexID) {
 		return vertexIDtoBrokerID.get(vertexID);
 	}
@@ -541,19 +656,19 @@ public class StreamGraph extends StreamingPlan {
 		int parallelism,
 		int maxParallelism) {
 		StreamNode source = this.addNode(sourceId,
-			null,
-			StreamIterationHead.class,
-			null,
-			"IterationSource-" + loopId);
+				null,
+				StreamIterationHead.class,
+				(StreamOperator) null,
+				"IterationSource-" + loopId);
 		sources.add(source.getId());
 		setParallelism(source.getId(), parallelism);
 		setMaxParallelism(source.getId(), maxParallelism);
 
 		StreamNode sink = this.addNode(sinkId,
-			null,
-			StreamIterationTail.class,
-			null,
-			"IterationSink-" + loopId);
+				null,
+				StreamIterationTail.class,
+				(StreamOperator) null,
+				"IterationSink-" + loopId);
 		sinks.add(sink.getId());
 		setParallelism(sink.getId(), parallelism);
 		setMaxParallelism(sink.getId(), parallelism);
@@ -565,7 +680,7 @@ public class StreamGraph extends StreamingPlan {
 		this.vertexIDtoLoopTimeout.put(source.getId(), timeout);
 		this.vertexIDtoLoopTimeout.put(sink.getId(), timeout);
 
-		return new Tuple2<>(source, sink);
+		return new Tuple2<>(null, null);
 	}
 
 	public Set<Tuple2<StreamNode, StreamNode>> getIterationSourceSinkPairs() {

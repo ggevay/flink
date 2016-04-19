@@ -740,7 +740,8 @@ public class DataStreamTest {
 	private static StreamOperator<?> getOperatorForDataStream(DataStream<?> dataStream) {
 		StreamExecutionEnvironment env = dataStream.getExecutionEnvironment();
 		StreamGraph streamGraph = env.getStreamGraph();
-		return streamGraph.getStreamNode(dataStream.getId()).getOperator();
+//		return streamGraph.getStreamNode(dataStream.getId()).getOperator();
+		return null;
 	}
 
 	private static Function getFunctionForDataStream(DataStream<?> dataStream) {

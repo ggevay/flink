@@ -36,6 +36,7 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
 import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.runtime.state.AbstractStateBackend;
+import org.apache.flink.streaming.api.operators.StreamOperatorNG;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskException;
 import org.apache.flink.util.InstantiationUtil;
 
@@ -43,7 +44,27 @@ import org.apache.flink.util.InstantiationUtil;
 public class StreamConfig implements Serializable {
 
 	private static final long serialVersionUID = 1L;
-	
+
+	private Map<StreamOperatorNG.Input<?>, TypeSerializer<?>> inputSerializers = new HashMap<>();
+
+	public Map<StreamOperatorNG.Input<?>, TypeSerializer<?>> getInputSerializers(ClassLoader cl) {
+		try {
+			return InstantiationUtil.readObjectFromConfig(this.config, "INPUT_SERIALIZERS", cl);
+		} catch (Exception e) {
+			throw new StreamTaskException("Could not instantiate serializers.", e);
+		}
+	}
+
+	public void setInputSerializers(Map<StreamOperatorNG.Input<?>, TypeSerializer<?>> inputSerializers) {
+		this.inputSerializers = inputSerializers;
+		try {
+			InstantiationUtil.writeObjectToConfig(inputSerializers, this.config, "INPUT_SERIALIZERS");
+		} catch (IOException e) {
+			throw new StreamTaskException("Could not serialize type serializers.", e);
+		}
+
+	}
+
 	// ------------------------------------------------------------------------
 	//  Config Keys
 	// ------------------------------------------------------------------------
@@ -180,7 +201,7 @@ public class StreamConfig implements Serializable {
 		return config.getLong(BUFFER_TIMEOUT, DEFAULT_TIMEOUT);
 	}
 
-	public void setStreamOperator(StreamOperator<?> operator) {
+	public void setStreamOperator(Object operator) {
 		if (operator != null) {
 			config.setClass(USER_FUNCTION, operator.getClass());
 

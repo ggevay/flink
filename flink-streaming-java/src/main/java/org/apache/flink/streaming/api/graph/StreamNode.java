@@ -19,7 +19,9 @@ package org.apache.flink.streaming.api.graph;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
@@ -31,6 +33,7 @@ import org.apache.flink.streaming.api.collector.selector.OutputSelector;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.util.Preconditions;
+import org.apache.flink.streaming.api.operators.StreamOperatorNG;
 
 /**
  * Class representing the operators in the streaming programs, with all their properties.
@@ -56,11 +59,13 @@ public class StreamNode implements Serializable {
 	private KeySelector<?,?> statePartitioner2;
 	private TypeSerializer<?> stateKeySerializer;
 
-	private transient StreamOperator<?> operator;
+	private transient Object operator;
 	private List<OutputSelector<?>> outputSelectors;
 	private TypeSerializer<?> typeSerializerIn1;
 	private TypeSerializer<?> typeSerializerIn2;
 	private TypeSerializer<?> typeSerializerOut;
+
+	private Map<StreamOperatorNG.Input<?>, TypeSerializer<?>> inputSerializers = new HashMap<>();
 
 	private List<StreamEdge> inEdges = new ArrayList<StreamEdge>();
 	private List<StreamEdge> outEdges = new ArrayList<StreamEdge>();
@@ -74,7 +79,7 @@ public class StreamNode implements Serializable {
 	public StreamNode(StreamExecutionEnvironment env,
 		Integer id,
 		String slotSharingGroup,
-		StreamOperator<?> operator,
+		Object operator,
 		String operatorName,
 		List<OutputSelector<?>> outputSelector,
 		Class<? extends AbstractInvokable> jobVertexClass) {
@@ -174,7 +179,7 @@ public class StreamNode implements Serializable {
 		this.bufferTimeout = bufferTimeout;
 	}
 
-	public StreamOperator<?> getOperator() {
+	public Object getOperator() {
 		return operator;
 	}
 
@@ -192,6 +197,14 @@ public class StreamNode implements Serializable {
 
 	public void addOutputSelector(OutputSelector<?> outputSelector) {
 		this.outputSelectors.add(outputSelector);
+	}
+
+	public void setInputSerializer(StreamOperatorNG.Input<?> input, TypeSerializer<?> serializer) {
+		inputSerializers.put(input, serializer);
+	}
+
+	public Map<StreamOperatorNG.Input<?>, TypeSerializer<?>> getInputSerializers() {
+		return inputSerializers;
 	}
 
 	public TypeSerializer<?> getTypeSerializerIn1() {

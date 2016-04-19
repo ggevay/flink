@@ -23,9 +23,12 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunction;
+import org.apache.flink.api.java.typeutils.InputTypeConfigurable;
+import org.apache.flink.streaming.api.operators.StreamOperatorNG;
 import org.apache.flink.streaming.api.transformations.CoFeedbackTransformation;
 import org.apache.flink.streaming.api.transformations.FeedbackTransformation;
 import org.apache.flink.streaming.api.transformations.OneInputTransformation;
+import org.apache.flink.streaming.api.transformations.OperatorTransformation;
 import org.apache.flink.streaming.api.transformations.PartitionTransformation;
 import org.apache.flink.streaming.api.transformations.SelectTransformation;
 import org.apache.flink.streaming.api.transformations.SinkTransformation;
@@ -42,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -174,8 +178,10 @@ public class StreamGraphGenerator {
 		transform.getOutputType();
 
 		Collection<Integer> transformedIds;
-		if (transform instanceof OneInputTransformation<?, ?>) {
-			transformedIds = transformOnInputTransform((OneInputTransformation<?, ?>) transform);
+//		if (transform instanceof OneInputTransformation<?, ?>) {
+//			transformedIds = transformOnInputTransform((OneInputTransformation<?, ?>) transform);
+		if (transform instanceof OperatorTransformation<?>) {
+			transformedIds = transformOperator((OperatorTransformation<?>) transform);
 		} else if (transform instanceof TwoInputTransformation<?, ?, ?>) {
 			transformedIds = transformTwoInputTransform((TwoInputTransformation<?, ?, ?>) transform);
 		} else if (transform instanceof SourceTransformation<?>) {
@@ -496,6 +502,59 @@ public class StreamGraphGenerator {
 
 		return Collections.emptyList();
 	}
+
+	/**
+	 * Transforms a {@link OperatorTransformation}.
+	 *
+	 * <p>
+	 * This recusively transforms the inputs, creates a new {@code StreamNode} in the graph and
+	 * wires the inputs to this new node.
+	 */
+	private <OUT> Collection<Integer> transformOperator(OperatorTransformation<OUT> transform) {
+
+		Map<StreamOperatorNG.Input<?>, StreamTransformation<?>> inputs = transform.getInputs();
+		Map<StreamOperatorNG.Input<?>, Collection<Integer>> inputIds = new HashMap<>();
+		Collection<Integer> allInputIds = new LinkedList<>();
+
+		for (Map.Entry<StreamOperatorNG.Input<?>, StreamTransformation<?>> input: inputs.entrySet()) {
+			Collection<Integer> ids = transform(input.getValue());
+			inputIds.put(input.getKey(), ids);
+			allInputIds.addAll(ids);
+		}
+
+
+		// the recursive call might have already transformed this
+		if (alreadyTransformed.containsKey(transform)) {
+			return alreadyTransformed.get(transform);
+		}
+
+		String slotSharingGroup = determineSlotSharingGroup(transform.getSlotSharingGroup(), allInputIds);
+
+		streamGraph.addOperator(transform.getId(),
+				slotSharingGroup,
+				transform.getOperator(),
+				transform.getOutputType(),
+				transform.getName());
+
+		streamGraph.setParallelism(transform.getId(), transform.getParallelism());
+
+		for (Map.Entry<StreamOperatorNG.Input<?>, StreamTransformation<?>> input: inputs.entrySet()) {
+			streamGraph.setInputSerializer(transform.getId(), input.getKey(), input.getValue().getOutputType().createSerializer(env.getConfig()));
+			if (input.getKey() instanceof InputTypeConfigurable) {
+				InputTypeConfigurable inputTypeConfigurable = (InputTypeConfigurable) input.getKey();
+				inputTypeConfigurable.setInputType(input.getValue().getOutputType(), env.getConfig());
+			}
+		}
+
+		for (Map.Entry<StreamOperatorNG.Input<?>, Collection<Integer>> input: inputIds.entrySet()) {
+			for (Integer inputId: input.getValue()) {
+				streamGraph.addEdge(inputId, transform.getId(), input.getKey());
+			}
+		}
+
+		return Collections.singleton(transform.getId());
+	}
+
 
 	/**
 	 * Transforms a {@code OneInputTransformation}.

@@ -132,7 +132,8 @@ public class StreamExecutionEnvironmentTest {
 	private static StreamOperator<?> getOperatorFromDataStream(DataStream<?> dataStream) {
 		StreamExecutionEnvironment env = dataStream.getExecutionEnvironment();
 		StreamGraph streamGraph = env.getStreamGraph();
-		return streamGraph.getStreamNode(dataStream.getId()).getOperator();
+//		return streamGraph.getStreamNode(dataStream.getId()).getOperator();
+		return null;
 	}
 
 	@SuppressWarnings("unchecked")

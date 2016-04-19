@@ -21,6 +21,7 @@ import java.io.Serializable;
 import java.util.List;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.streaming.api.operators.StreamOperatorNG;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 
 /**
@@ -44,6 +45,11 @@ public class StreamEdge implements Serializable {
 	final private int typeNumber;
 
 	/**
+	 * The {@link StreamOperatorNG.Input} to which this edge is connected.
+	 */
+	final private StreamOperatorNG.Input<?> input;
+
+	/**
 	 * A list of output names that the target vertex listens to (if there is
 	 * output selection).
 	 */
@@ -55,11 +61,32 @@ public class StreamEdge implements Serializable {
 		this.sourceVertex = sourceVertex;
 		this.targetVertex = targetVertex;
 		this.typeNumber = typeNumber;
+		this.input = null;
 		this.selectedNames = selectedNames;
 		this.outputPartitioner = outputPartitioner;
 
 		this.edgeId = sourceVertex + "_" + targetVertex + "_" + typeNumber + "_" + selectedNames
 				+ "_" + outputPartitioner;
+	}
+
+	public StreamEdge(StreamNode sourceVertex,
+			StreamNode targetVertex,
+			StreamOperatorNG.Input<?> input,
+			List<String> selectedNames,
+			StreamPartitioner<?> outputPartitioner) {
+		this.sourceVertex = sourceVertex;
+		this.targetVertex = targetVertex;
+		this.typeNumber = -1;
+		this.input = input;
+		this.selectedNames = selectedNames;
+		this.outputPartitioner = outputPartitioner;
+
+		this.edgeId = sourceVertex + "_" + targetVertex + "_" + typeNumber + "_" + selectedNames
+				+ "_" + outputPartitioner;
+	}
+
+	public StreamOperatorNG.Input<?> getInput() {
+		return input;
 	}
 
 	public StreamNode getSourceVertex() {

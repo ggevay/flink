@@ -17,19 +17,40 @@
 
 package org.apache.flink.streaming.examples.windowing;
 
+import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.functions.RichMapFunction;
+import org.apache.flink.api.common.state.ValueState;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeutils.base.LongSerializer;
+import org.apache.flink.api.java.Utils;
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.examples.java.wordcount.util.WordCountData;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.DataStreamSource;
+import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.source.SourceFunction;
+import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.examples.wordcount.WordCount;
+import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+
+import static javafx.scene.input.KeyCode.T;
 
 /**
  * Implements a windowed version of the streaming "WordCount" program.
  *
  * <p>
  * The input is a plain text file with lines separated by newline characters.
- * 
+ *
  * <p>
  * Usage: <code>WordCount --input &lt;path&gt; --output &lt;path&gt; --window &lt;n&gt; --slide &lt;n&gt;</code><br>
  * If no parameters are provided, the program is run with default data from
@@ -52,47 +73,182 @@ public class WindowWordCount {
 
 	public static void main(String[] args) throws Exception {
 
-		final ParameterTool params = ParameterTool.fromArgs(args);
 
 		// set up the execution environment
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(1);
+		env.disableOperatorChaining();
 
-		// get input data
-		DataStream<String> text;
-		if (params.has("input")) {
-			// read the text file from given input path
-			text = env.readTextFile(params.get("input"));
-		} else {
-			System.out.println("Executing WindowWordCount example with default input data set.");
-			System.out.println("Use --input to specify file input.");
-			// get default test text data
-			text = env.fromElements(WordCountData.WORDS);
-		}
+		DataStreamSource<String> source1 = env.addSource(new InfiniteSource());
+//		DataStreamSource<String> source1 = env.fromElements("Hello", "Here");
+//		DataStreamSource<String> source2 = env.fromElements("foo", "bar");
+//		DataStreamSource<String> source3 = env.fromElements("baz", "bat");
 
-		// make parameters available in the web interface
-		env.getConfig().setGlobalJobParameters(params);
+		source1
+				.map(new MapFunction<String, String>() {
+					@Override
+					public String map(String value) throws Exception {
+//						System.out.println("GOT: " + value);
+						return value;
+					}
+				})
+				.map(new MapFunction<String, String>() {
+					@Override
+					public String map(String value) throws Exception {
+//						System.out.println("GOT: " + value);
+						return value;
+					}
+				})
+				.map(new MapFunction<String, String>() {
+					@Override
+					public String map(String value) throws Exception {
+//						System.out.println("GOT: " + value);
+						return value;
+					}
+				})
+				.map(new MapFunction<String, String>() {
+					@Override
+					public String map(String value) throws Exception {
+//						System.out.println("GOT: " + value);
+						return value;
+					}
+				})
+				.map(new MapFunction<String, String>() {
+					@Override
+					public String map(String value) throws Exception {
+//						System.out.println("GOT: " + value);
+						return value;
+					}
+				})
+				.map(new MapFunction<String, String>() {
+					@Override
+					public String map(String value) throws Exception {
+//						System.out.println("GOT: " + value);
+						return value;
+					}
+				})
+				.map(new MapFunction<String, String>() {
+					@Override
+					public String map(String value) throws Exception {
+//						System.out.println("GOT: " + value);
+						return value;
+					}
+				})
+//				.keyBy(new KeySelector<String, String>() {
+//					@Override
+//					public String getKey(String value) throws Exception {
+//						return value;
+//					}
+//				})
+				.map(new RichMapFunction<String, Object>() {
 
-		final int windowSize = params.getInt("window", 250);
-		final int slideSize = params.getInt("slide", 150);
+					long count = 0;
+					long startTime = System.currentTimeMillis();
 
-		DataStream<Tuple2<String, Integer>> counts =
-		// split up the lines in pairs (2-tuples) containing: (word,1)
-		text.flatMap(new WordCount.Tokenizer())
-				// create windows of windowSize records slided every slideSize records
-				.keyBy(0)
-				.countWindow(windowSize, slideSize)
-				// group by the tuple field "0" and sum up tuple field "1"
-				.sum(1);
+					@Override
+					public Object map(String value) throws Exception {
+//						ValueState<Long> countState = getRuntimeContext().getState(new ValueStateDescriptor<>(
+//								"count",
+//								LongSerializer.INSTANCE,
+//								0L));
+//						countState.update(countState.value() + 1);
+//						System.out.println("COUNT STATE: " + countState.value());
+						this.count++;
+						if (this.count > 10_000_000) {
+							long currentTime = System.currentTimeMillis();
 
-		// emit result
-		if (params.has("output")) {
-			counts.writeAsText(params.get("output"));
-		} else {
-			System.out.println("Printing result to stdout. Use --output to specify output path.");
-			counts.print();
-		}
+							System.out.println("e/s: " + ((float) this.count / (currentTime - startTime) * 1000));
+
+							this.count = 0;
+							startTime = currentTime;
+						}
+						return null;
+					}
+				});
+
+
+//		MyOperator myOperator = new MyOperator();
+//
+//		OperatorTransformation<String> transform = new OperatorTransformation<>("My Operator",
+//				myOperator,
+//				BasicTypeInfo.STRING_TYPE_INFO,
+//				env.getParallelism());
+//
+//		transform.setInput(myOperator.input1, source1.getTransformation());
+//		transform.setInput(myOperator.input2, source2.getTransformation());
+//		transform.setInput(myOperator.input3, source3.getTransformation());
+//
+//		env.addOperator(transform);
 
 		// execute program
-		env.execute("WindowWordCount");
+		env.execute("operator NG");
 	}
+
+	public static class InfiniteSource implements SourceFunction<String> {
+		@Override
+		public void run(SourceContext<String> ctx) throws Exception {
+			while (true) {
+				ctx.collect("hello");
+			}
+		}
+
+		@Override
+		public void cancel() {
+
+		}
+	}
+
+
+//	private static class MyOperator extends StreamOperatorNG<String> {
+//
+//		Input<String> input1 = new Input<String>() {
+//			@Override
+//			public void processElement(StreamRecord<String> element) throws Exception {
+//				System.out.println("GOT (ON INPUT 1): " + element.getValue());
+//				output.collect(new StreamRecord<>(element.getValue()));
+//			}
+//
+//			@Override
+//			public void processWatermark(Watermark watermark) {
+//
+//			}
+//		};
+//
+//		Input<String> input2 = new Input<String>() {
+//			@Override
+//			public void processElement(StreamRecord<String> element) throws Exception {
+//				System.out.println("GOT (ON INPUT 2): " + element.getValue());
+//				output.collect(new StreamRecord<>(element.getValue()));
+//			}
+//
+//			@Override
+//			public void processWatermark(Watermark watermark) {
+//
+//			}
+//		};
+//
+//		Input<String> input3 = new Input<String>() {
+//			@Override
+//			public void processElement(StreamRecord<String> element) throws Exception {
+//				System.out.println("GOT (ON INPUT 3): " + element.getValue());
+//				output.collect(new StreamRecord<>(element.getValue()));
+//			}
+//
+//			@Override
+//			public void processWatermark(Watermark watermark) {
+//
+//			}
+//		};
+//
+//
+//
+//		@Override
+//		public Collection<Input<?>> getInputs() {
+//			List<Input<?>> result = new LinkedList<>();
+//			result.add(input1);
+//			result.add(input2);
+//			result.add(input3);
+//			return result;
+//		}
+//	}
 }
