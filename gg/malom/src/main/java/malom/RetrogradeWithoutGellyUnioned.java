@@ -60,7 +60,7 @@ public class RetrogradeWithoutGellyUnioned implements Serializable {
 						out.collect(Tuple2.of(v.f0, target));
 					}
 				}
-			}).name("edges") // TODO: check that this is not materialized
+			}).name("edges")
 			.map(new MapFunction<Tuple2<GameState, GameState>, Tuple2<GameState, Short>>() {
 				@Override
 				public Tuple2<GameState, Short> map(Tuple2<GameState, GameState> t) throws Exception {
@@ -68,7 +68,7 @@ public class RetrogradeWithoutGellyUnioned implements Serializable {
 				}
 			})
 			//.groupBy(0).sum(1)
-			.groupBy(0).reduce(new SumReducer<>())
+			.groupBy(0).reduce(new SumReducer<>()).setCombineHint(Config.combineHint)
 			.coGroup(vertices).where(0).equalTo(0).with(new CoGroupFunction<Tuple2<GameState, Short>, Tuple2<GameState, ValueCount>, Tuple2<GameState, Short>>() {
 				@Override
 				public void coGroup(Iterable<Tuple2<GameState, Short>> first, Iterable<Tuple2<GameState, ValueCount>> second, Collector<Tuple2<GameState, Short>> out) throws Exception {

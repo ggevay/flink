@@ -1,6 +1,7 @@
 package malom;
 
 import java.nio.file.Paths;
+import org.apache.flink.api.common.operators.base.ReduceOperatorBase.CombineHint;
 
 public class Config {
 	static final String movegenFile = "/tmp/movegen";
@@ -21,4 +22,6 @@ public class Config {
 	static String resultOutPathUnioned(SectorId sector) {
 		return Paths.get(Config.outPath, "res_unioned", sector.toString()).toString();
 	}
+
+	static CombineHint combineHint;
 }

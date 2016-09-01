@@ -101,7 +101,7 @@ public class RetrogradeCommon {
 						// both of them are wins
 						return Tuple3.of(a.f0, a.f1, (short) (a.f2 + b.f2));
 					}
-				})
+				}).setCombineHint(Config.combineHint)
 				.join(iteration.getSolutionSet()).where(0).equalTo(0).with(new RichFlatJoinFunction<Tuple3<GameState, Value, Short>, Tuple2<GameState, ValueCount>, Tuple2<GameState, ValueCount>>() {
 
 				@Override

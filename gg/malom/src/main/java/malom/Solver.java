@@ -1,5 +1,6 @@
 package malom;
 
+import org.apache.flink.api.common.operators.base.ReduceOperatorBase.CombineHint;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.typeutils.PojoTypeInfo;
 
@@ -25,6 +26,8 @@ public class Solver {
 		PojoTypeInfo.registerCustomSerializer(GameState.class, GameState.GameStateSerializer.class);
 		PojoTypeInfo.registerCustomSerializer(ValueCount.class, ValueCount.ValueCountSerializer.class);
 		PojoTypeInfo.registerCustomSerializer(Value.class, Value.ValueSerializer.class);
+
+		Config.combineHint = CombineHint.HASH;
 
 
 
