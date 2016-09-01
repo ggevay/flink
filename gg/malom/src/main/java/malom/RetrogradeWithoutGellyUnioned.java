@@ -1,9 +1,7 @@
 package malom;
 
-import org.apache.flink.api.common.functions.CoGroupFunction;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.JoinFunction;
-import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -13,7 +11,6 @@ import org.apache.flink.util.Collector;
 
 import java.io.Serializable;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 public class RetrogradeWithoutGellyUnioned implements Serializable {
@@ -53,41 +50,28 @@ public class RetrogradeWithoutGellyUnioned implements Serializable {
 		DataSet<Tuple2<GameState, ValueCount>> vertices, Movegen movegen) {
 
 		DataSet<Tuple2<GameState, Short>> inDegrees = vertices
-			.flatMap(new FlatMapFunction<Tuple2<GameState,ValueCount>, Tuple2<GameState, GameState>>() {
+			.flatMap(new FlatMapFunction<Tuple2<GameState,ValueCount>, Tuple2<GameState, Short>>() {
 				@Override
-				public void flatMap(Tuple2<GameState, ValueCount> v, Collector<Tuple2<GameState, GameState>> out) throws Exception {
+				public void flatMap(Tuple2<GameState, ValueCount> v, Collector<Tuple2<GameState, Short>> out) throws Exception {
 					for(GameState target: RetrogradeCommon.generateEdges(v.f0, movegen)) {
-						out.collect(Tuple2.of(v.f0, target));
+						out.collect(Tuple2.of(target, (short) 1));
 					}
 				}
-			}).name("edges")
-			.map(new MapFunction<Tuple2<GameState, GameState>, Tuple2<GameState, Short>>() {
-				@Override
-				public Tuple2<GameState, Short> map(Tuple2<GameState, GameState> t) throws Exception {
-					return Tuple2.of(t.f1, (short) 1);
-				}
-			})
+			}).name("edge-targets")
 			//.groupBy(0).sum(1)
-			.groupBy(0).reduce(new SumReducer<>()).setCombineHint(Config.combineHint)
-			.coGroup(vertices).where(0).equalTo(0).with(new CoGroupFunction<Tuple2<GameState, Short>, Tuple2<GameState, ValueCount>, Tuple2<GameState, Short>>() {
-				@Override
-				public void coGroup(Iterable<Tuple2<GameState, Short>> first, Iterable<Tuple2<GameState, ValueCount>> second, Collector<Tuple2<GameState, Short>> out) throws Exception {
-					// First is a degree coming from above, second should be considered 0 degree
-					Iterator<Tuple2<GameState, Short>> it1 = first.iterator();
-					Iterator<Tuple2<GameState, ValueCount>> it2 = second.iterator();
-					if (it1.hasNext()) {
-						out.collect(it1.next());
-					} else {
-						out.collect(Tuple2.of(it2.next().f0, (short) 0));
-					}
-				}
-			}).name("in-degrees"); // todo: this could be an outer join instead of coGroup
+			.groupBy(0).reduce(new SumReducer<>()).name("in-degrees").setCombineHint(Config.combineHint);
 
 
-		return vertices.join(inDegrees).where(0).equalTo(0).with(new JoinFunction<Tuple2<GameState, ValueCount>, Tuple2<GameState, Short>, Tuple2<GameState, ValueCount>>() {
+		return vertices.leftOuterJoin(inDegrees).where(0).equalTo(0).with(new JoinFunction<Tuple2<GameState, ValueCount>, Tuple2<GameState, Short>, Tuple2<GameState, ValueCount>>() {
 			@Override
 			public Tuple2<GameState, ValueCount> join(Tuple2<GameState, ValueCount> vertex, Tuple2<GameState, Short> deg0) throws Exception {
-				short deg = deg0.f1;
+				short deg;
+				if (deg0 != null) {
+					deg = deg0.f1;
+				} else {
+					deg = 0;
+				}
+
 				GameState state = vertex.f0;
 				ValueCount value = vertex.f1;
 				if (value.isNull()) {
