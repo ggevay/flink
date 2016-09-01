@@ -13,9 +13,10 @@ import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.Vertex;
 import org.apache.flink.graph.Edge;
 import org.apache.flink.graph.spargel.MessageIterator;
-import org.apache.flink.graph.spargel.MessagingFunction;
-import org.apache.flink.graph.spargel.VertexCentricConfiguration;
-import org.apache.flink.graph.spargel.VertexUpdateFunction;
+import org.apache.flink.graph.spargel.ScatterFunction;
+import org.apache.flink.graph.spargel.ScatterGatherConfiguration;
+import org.apache.flink.graph.spargel.GatherFunction;
+import org.apache.flink.types.LongValue;
 import org.apache.flink.types.NullValue;
 import org.apache.flink.util.Collector;
 
@@ -165,10 +166,10 @@ public class Retrograde implements Serializable {
 			Graph<GameState, ValueCount, NullValue> g,
 			SectorId mainSec1, SectorId mainSec2,
 			ExecutionEnvironment env) {
-		return Graph.fromDataSet(g.getVertices().join(g.inDegrees()).where(0).equalTo(0).with(new JoinFunction<Vertex<GameState, ValueCount>, Tuple2<GameState, Long>, Vertex<GameState, ValueCount>>() {
+		return Graph.fromDataSet(g.getVertices().join(g.inDegrees()).where(0).equalTo(0).with(new JoinFunction<Vertex<GameState, ValueCount>, Tuple2<GameState, LongValue>, Vertex<GameState, ValueCount>>() {
 			@Override
-			public Vertex<GameState, ValueCount> join(Vertex<GameState, ValueCount> vertex, Tuple2<GameState, Long> deg0) throws Exception {
-				long deg = deg0.f1;
+			public Vertex<GameState, ValueCount> join(Vertex<GameState, ValueCount> vertex, Tuple2<GameState, LongValue> deg0) throws Exception {
+				long deg = deg0.f1.getValue();
 				GameState state = vertex.getId();
 				ValueCount value = vertex.getValue();
 				if (!state.sid.equals(mainSec1) && (mainSec2 == null || !state.sid.equals(mainSec2))) {
@@ -204,11 +205,21 @@ public class Retrograde implements Serializable {
 	 */
 	public static Graph<GameState, ValueCount, NullValue> iterate(Graph<GameState, ValueCount, NullValue> g) {
 
-		VertexCentricConfiguration config = new VertexCentricConfiguration();
+		ScatterGatherConfiguration config = new ScatterGatherConfiguration();
 		//config.setOptDegrees(true);
 		//config.setSolutionSetUnmanagedMemory(true);
 
-		return g.runVertexCentricIteration(new VertexUpdateFunction<GameState, ValueCount, Value>() {
+		return g.runScatterGatherIteration(new ScatterFunction<GameState, ValueCount, Value, NullValue>() {
+			@Override
+			public void sendMessages(Vertex<GameState, ValueCount> vertex) throws Exception {
+				// Note: if we were coding the iteration manually (without Gelly),
+				// we could stuff the below "if" into a filter to be done before joining the workset with the edges.
+				if (vertex.getValue().isValue()) {
+					sendMessageToAllNeighbors(vertex.getValue().value);
+					assert vertex.getValue().value.depth + 1 == getSuperstepNumber();
+				}
+			}
+		}, new GatherFunction<GameState, ValueCount, Value>() {
 			@Override
 			public void updateVertex(Vertex<GameState, ValueCount> vertex, MessageIterator<Value> inMessages) throws Exception {
 				boolean newValueSet = false;
@@ -242,16 +253,6 @@ public class Retrograde implements Serializable {
 				}
 				if (newValueSet) {
 					setNewVertexValue(vv);
-				}
-			}
-		}, new MessagingFunction<GameState, ValueCount, Value, NullValue>() {
-			@Override
-			public void sendMessages(Vertex<GameState, ValueCount> vertex) throws Exception {
-				// Note: if we were coding the iteration manually (without Gelly),
-				// we could stuff the below "if" into a filter to be done before joining the workset with the edges.
-				if (vertex.getValue().isValue()) {
-					sendMessageToAllNeighbors(vertex.getValue().value);
-					assert vertex.getValue().value.depth + 1 == getSuperstepNumber();
 				}
 			}
 		}, 1000, config);
