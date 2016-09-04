@@ -22,6 +22,7 @@ import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.examples.java.wordcount.util.WordCountData;
 import org.apache.flink.util.Collector;
@@ -75,12 +76,12 @@ public class WordCount {
 			text = WordCountData.getDefaultTextLineDataSet(env);
 		}
 
-		DataSet<Tuple2<String, Integer>> counts = 
+		DataSet<Tuple3<Tuple2<Byte,Byte>, String, Integer>> counts =
 				// split up the lines in pairs (2-tuples) containing: (word,1)
 				text.flatMap(new Tokenizer())
 				// group by the tuple field "0" and sum up tuple field "1"
-				.groupBy(0)
-				.sum(1);
+				.groupBy(1)
+				.sum(2);
 
 		// emit result
 		if (params.has("output")) {
@@ -103,17 +104,17 @@ public class WordCount {
 	 * FlatMapFunction. The function takes a line (String) and splits it into 
 	 * multiple pairs in the form of "(word,1)" ({@code Tuple2<String, Integer>}).
 	 */
-	public static final class Tokenizer implements FlatMapFunction<String, Tuple2<String, Integer>> {
+	public static final class Tokenizer implements FlatMapFunction<String, Tuple3<Tuple2<Byte,Byte>, String, Integer>> {
 
 		@Override
-		public void flatMap(String value, Collector<Tuple2<String, Integer>> out) {
+		public void flatMap(String value, Collector<Tuple3<Tuple2<Byte,Byte>, String, Integer>> out) {
 			// normalize and split the line
 			String[] tokens = value.toLowerCase().split("\\W+");
 			
 			// emit the pairs
 			for (String token : tokens) {
 				if (token.length() > 0) {
-					out.collect(new Tuple2<String, Integer>(token, 1));
+					out.collect(new Tuple3<Tuple2<Byte,Byte>, String, Integer>(Tuple2.of((byte)0,(byte)0), token, 1));
 				}
 			}
 		}
