@@ -147,7 +147,7 @@ public abstract class FieldAccessor<T, F> implements Serializable {
 	 * There are two versions of TupleFieldAccessor, differing in whether there is an other
 	 * FieldAccessor nested inside. The no inner accessor version is probably a little faster.
 	 */
-	static final class SimpleTupleFieldAccessor<T extends Tuple, F> extends FieldAccessor<T, F> {
+	static final class SimpleTupleFieldAccessor<T, F> extends FieldAccessor<T, F> {
 
 		private static final long serialVersionUID = 1L;
 
@@ -169,12 +169,12 @@ public abstract class FieldAccessor<T, F> implements Serializable {
 		@SuppressWarnings("unchecked")
 		@Override
 		public F get(T record) {
-			return (F) record.getField(pos);
+			return (F) ((Tuple)record).getField(pos);
 		}
 
 		@Override
 		public T set(T record, F fieldValue) {
-			record.setField(fieldValue, pos);
+			((Tuple)record).setField(fieldValue, pos);
 			return record;
 		}
 	}
@@ -184,7 +184,7 @@ public abstract class FieldAccessor<T, F> implements Serializable {
 	 * @param <R> The field type at the first level
 	 * @param <F> The field type at the innermost level
 	 */
-	static final class RecursiveTupleFieldAccessor<T extends Tuple, R, F> extends FieldAccessor<T, F> {
+	static final class RecursiveTupleFieldAccessor<T, R, F> extends FieldAccessor<T, F> {
 
 		private static final long serialVersionUID = 1L;
 
@@ -213,14 +213,14 @@ public abstract class FieldAccessor<T, F> implements Serializable {
 
 		@Override
 		public F get(T record) {
-			final R inner = record.getField(pos);
+			final R inner = ((Tuple)record).getField(pos);
 			return innerAccessor.get(inner);
 		}
 
 		@Override
 		public T set(T record, F fieldValue) {
-			final R inner = record.getField(pos);
-			record.setField(innerAccessor.set(inner, fieldValue), pos);
+			final R inner = ((Tuple)record).getField(pos);
+			((Tuple)record).setField(innerAccessor.set(inner, fieldValue), pos);
 			return record;
 		}
 	}
