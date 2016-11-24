@@ -74,7 +74,7 @@ public class FieldAccessorFactory implements Serializable {
 
 		// In case of tuples
 		} else if (typeInfo.isTupleType()) {
-			return new FieldAccessor.SimpleTupleFieldAccessor<>(pos, (TupleTypeInfoBase)typeInfo);
+			return new FieldAccessor.SimpleTupleFieldAccessor(pos, typeInfo);
 
 		// Default case, PojoType is directed to this statement
 		} else {
@@ -170,10 +170,10 @@ public class FieldAccessorFactory implements Serializable {
 				}
 			}
 			if (decomp.tail == null) {
-				return new FieldAccessor.SimpleTupleFieldAccessor<>(fieldPos, tupleTypeInfo);
+				return new FieldAccessor.SimpleTupleFieldAccessor(fieldPos, tupleTypeInfo);
 			} else {
 				FieldAccessor<?, F> innerAccessor = getAccessor(tupleTypeInfo.getTypeAt(fieldPos), decomp.tail, config);
-				return new FieldAccessor.RecursiveTupleFieldAccessor<>(fieldPos, innerAccessor, tupleTypeInfo);
+				return new FieldAccessor.RecursiveTupleFieldAccessor(fieldPos, innerAccessor, tupleTypeInfo);
 			}
 
 		// Default statement
