@@ -408,7 +408,7 @@ public class SingleOutputStreamOperator<T> extends DataStream<T> {
 	// ------------------------------------------------------------------------
 
 	@Override
-	protected DataStream<T> setConnectionType(StreamPartitioner<T> partitioner) {
+	public DataStream<T> setConnectionType(StreamPartitioner<T> partitioner) {
 		return new SingleOutputStreamOperator<>(this.getExecutionEnvironment(), new PartitionTransformation<>(this.getTransformation(), partitioner));
 	}
 
