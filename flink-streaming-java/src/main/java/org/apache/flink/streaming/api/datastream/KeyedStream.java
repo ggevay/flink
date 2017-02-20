@@ -213,7 +213,7 @@ public class KeyedStream<T, KEY> extends DataStream<T> {
 	}
 
 	@Override
-	protected DataStream<T> setConnectionType(StreamPartitioner<T> partitioner) {
+	public DataStream<T> setConnectionType(StreamPartitioner<T> partitioner) {
 		throw new UnsupportedOperationException("Cannot override partitioning for KeyedStream.");
 	}
 
