@@ -543,6 +543,7 @@ class JobManager(
     case CancelJob(jobID) =>
       cancelJob(jobID)
 
+    // CFL
     case VoteStop(jobID, numTMs) =>
       log.info(s"GGG JM received VoteStop($jobID, $numTMs)")
 
