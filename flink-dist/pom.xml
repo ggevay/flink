@@ -403,6 +403,16 @@ under the License.
 				</configuration>
 			</plugin>
 
+			<!--&lt;!&ndash; binary compatibility checks &ndash;&gt;-->
+			<!--<plugin>-->
+				<!--<groupId>com.github.siom79.japicmp</groupId>-->
+				<!--<artifactId>japicmp-maven-plugin</artifactId>-->
+				<!--<configuration>-->
+					<!--<skip>true</skip>-->
+				<!--</configuration>-->
+			<!--</plugin>-->
+
+
 			<!--Build uber jar-->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

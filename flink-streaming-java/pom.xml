@@ -96,11 +96,11 @@ under the License.
 	<build>
 		<plugins>
 
-			<!-- activate API compatibility checks -->
-			<plugin>
-				<groupId>com.github.siom79.japicmp</groupId>
-				<artifactId>japicmp-maven-plugin</artifactId>
-			</plugin>
+			<!--&lt;!&ndash; activate API compatibility checks &ndash;&gt;-->
+			<!--<plugin>-->
+				<!--<groupId>com.github.siom79.japicmp</groupId>-->
+				<!--<artifactId>japicmp-maven-plugin</artifactId>-->
+			<!--</plugin>-->
 
 			<!-- disable fork reuse for the streaming project, because of
 			incorrect declaration of tests -->

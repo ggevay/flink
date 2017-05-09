@@ -73,13 +73,7 @@ under the License.
 				</executions>
 			</plugin>
 
-			<plugin>
-				<groupId>com.github.siom79.japicmp</groupId>
-				<artifactId>japicmp-maven-plugin</artifactId>
-				<configuration>
-					<skip>true</skip>
-				</configuration>
-			</plugin>
+
 
 			<!-- use alternative delimiter for filtering resources -->
 			<plugin>
@@ -92,6 +86,15 @@ under the License.
 					</delimiters>
 				</configuration>
 			</plugin>
+
+			<!--<plugin>-->
+				<!--<groupId>com.github.siom79.japicmp</groupId>-->
+				<!--<artifactId>japicmp-maven-plugin</artifactId>-->
+				<!--<configuration>-->
+					<!--<skip>true</skip>-->
+				<!--</configuration>-->
+			<!--</plugin>-->
+
 		</plugins>
 		<resources>
 			<resource>
