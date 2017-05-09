@@ -312,14 +312,14 @@ under the License.
 	<build>
 		<plugins>
 
-			<!-- binary compatibility checks -->
-			<plugin>
-				<groupId>com.github.siom79.japicmp</groupId>
-				<artifactId>japicmp-maven-plugin</artifactId>
-				<configuration>
-					<skip>true</skip>
-				</configuration>
-			</plugin>
+			<!--&lt;!&ndash; binary compatibility checks &ndash;&gt;-->
+			<!--<plugin>-->
+				<!--<groupId>com.github.siom79.japicmp</groupId>-->
+				<!--<artifactId>japicmp-maven-plugin</artifactId>-->
+				<!--<configuration>-->
+					<!--<skip>true</skip>-->
+				<!--</configuration>-->
+			<!--</plugin>-->
 
 			<!--Build uber jar-->
 			<plugin>
