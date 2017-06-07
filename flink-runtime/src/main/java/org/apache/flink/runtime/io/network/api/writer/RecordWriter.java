@@ -106,6 +106,13 @@ public class RecordWriter<T extends IOReadableWritable> {
 		}
 	}
 
+	public void emitWithFlush(T record) throws IOException, InterruptedException {
+		for (int targetChannel : channelSelector.selectChannels(record, numChannels)) {
+			sendToTarget(record, targetChannel);
+			targetPartition.flush(targetChannel);
+		}
+	}
+
 	/**
 	 * This is used to broadcast Streaming Watermarks in-band with records. This ignores
 	 * the {@link ChannelSelector}.
@@ -116,11 +123,24 @@ public class RecordWriter<T extends IOReadableWritable> {
 		}
 	}
 
+	public void broadcastEmitWithFlush(T record) throws IOException, InterruptedException {
+		for (int targetChannel = 0; targetChannel < numChannels; targetChannel++) {
+			sendToTarget(record, targetChannel);
+			targetPartition.flush(targetChannel);
+		}
+	}
+
 	/**
 	 * This is used to send LatencyMarks to a random target channel.
 	 */
 	public void randomEmit(T record) throws IOException, InterruptedException {
 		sendToTarget(record, rng.nextInt(numChannels));
+	}
+
+	public void randomEmitWithFlush(T record) throws IOException, InterruptedException {
+		int targetChannel = rng.nextInt(numChannels);
+		sendToTarget(record, targetChannel);
+		targetPartition.flush(targetChannel);
 	}
 
 	private void sendToTarget(T record, int targetChannel) throws IOException, InterruptedException {
