@@ -47,6 +47,7 @@ import org.apache.flink.streaming.runtime.streamstatus.StatusWatermarkValve;
 import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 import org.apache.flink.streaming.runtime.streamstatus.StreamStatusMaintainer;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
+import org.apache.flink.streaming.runtime.gg.NoAutoClose;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -222,11 +223,16 @@ public class StreamInputProcessor<IN> {
 				}
 			}
 			else {
-				isFinished = true;
-				if (!barrierHandler.isEmpty()) {
-					throw new IllegalStateException("Trailing data in checkpoint barrier handler.");
+				if (!(streamOperator instanceof NoAutoClose)) {
+					isFinished = true;
+					if (!barrierHandler.isEmpty()) {
+						throw new IllegalStateException("Trailing data in checkpoint barrier handler.");
+					}
+					return false;
+				} else {
+					Thread.sleep(100);
+					return true;
 				}
-				return false;
 			}
 		}
 	}
