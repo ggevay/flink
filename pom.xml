@@ -66,14 +66,14 @@ under the License.
 		<module>flink-connectors</module>
 		<module>flink-examples</module>
 		<module>flink-clients</module>
-		<module>flink-tests</module>
-		<module>flink-test-utils-parent</module>
-		<module>flink-libraries</module>
+		<!--<module>flink-tests</module>-->
+		<!--<module>flink-test-utils-parent</module>-->
+		<!--<module>flink-libraries</module>-->
 		<module>flink-scala-shell</module>
 		<module>flink-quickstart</module>
 		<module>flink-contrib</module>
 		<module>flink-dist</module>
-		<module>flink-mesos</module>
+		<!--<module>flink-mesos</module>-->
 		<module>flink-metrics</module>
 		<module>flink-yarn</module>
 		<module>flink-fs-tests</module>
