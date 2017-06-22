@@ -1207,9 +1207,6 @@ class TaskManager(
 
       val cflMan = CFLManager.getSing
       assert(cflMan != null) // mert mar a TM indulasakor letrehoztuk
-      if (cflMan.getJobID == null) {
-        cflMan.resetCFL()
-      }
       cflMan.setJobID(jobInformation.getJobId)
 
       val taskInformation = try {
