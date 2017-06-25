@@ -45,6 +45,8 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 
 	private static final Logger LOG = LoggerFactory.getLogger(TaskManagerConfiguration.class);
 
+	public final boolean cflManDeactivated;
+
 	private final int numberSlots;
 
 	private final String[] tmpDirectories;
@@ -74,6 +76,7 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 	private final String taskManagerStdoutPath;
 
 	public TaskManagerConfiguration(
+		boolean cflManDeactivated,
 		int numberSlots,
 		String[] tmpDirectories,
 		Time timeout,
@@ -88,6 +91,7 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 		@Nullable String taskManagerLogPath,
 		@Nullable String taskManagerStdoutPath) {
 
+		this.cflManDeactivated = cflManDeactivated;
 		this.numberSlots = numberSlots;
 		this.tmpDirectories = Preconditions.checkNotNull(tmpDirectories);
 		this.timeout = Preconditions.checkNotNull(timeout);
@@ -168,6 +172,8 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 
 	public static TaskManagerConfiguration fromConfiguration(Configuration configuration) {
 		int numberSlots = configuration.getInteger(TaskManagerOptions.NUM_TASK_SLOTS, 1);
+
+		boolean cflManDeactivated = configuration.getBoolean("cflManDeactivated", false);
 
 		if (numberSlots == -1) {
 			numberSlots = 1;
@@ -264,6 +270,7 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 		}
 
 		return new TaskManagerConfiguration(
+			cflManDeactivated,
 			numberSlots,
 			tmpDirPaths,
 			timeout,
