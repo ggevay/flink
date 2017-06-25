@@ -42,6 +42,8 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 
 	private static final Logger LOG = LoggerFactory.getLogger(TaskManagerConfiguration.class);
 
+	public final boolean cflManDeactivated;
+
 	private final int numberSlots;
 
 	private final String[] tmpDirectories;
@@ -60,6 +62,7 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 	private final boolean exitJvmOnOutOfMemory;
 
 	public TaskManagerConfiguration(
+		boolean cflManDeactivated,
 		int numberSlots,
 		String[] tmpDirectories,
 		Time timeout,
@@ -71,6 +74,7 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 		Configuration configuration,
 		boolean exitJvmOnOutOfMemory) {
 
+		this.cflManDeactivated = cflManDeactivated;
 		this.numberSlots = numberSlots;
 		this.tmpDirectories = Preconditions.checkNotNull(tmpDirectories);
 		this.timeout = Preconditions.checkNotNull(timeout);
@@ -131,6 +135,9 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 	// --------------------------------------------------------------------------------------------
 
 	public static TaskManagerConfiguration fromConfiguration(Configuration configuration) {
+
+		boolean cflManDeactivated = configuration.getBoolean("cflManDeactivated", false);
+
 		int numberSlots = configuration.getInteger(ConfigConstants.TASK_MANAGER_NUM_TASK_SLOTS, 1);
 
 		if (numberSlots == -1) {
@@ -221,6 +228,7 @@ public class TaskManagerConfiguration implements TaskManagerRuntimeInfo {
 		final boolean exitOnOom = configuration.getBoolean(TaskManagerOptions.KILL_ON_OUT_OF_MEMORY);
 
 		return new TaskManagerConfiguration(
+			cflManDeactivated,
 			numberSlots,
 			tmpDirPaths,
 			timeout,
