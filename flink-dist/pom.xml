@@ -97,17 +97,17 @@ under the License.
 			<version>${project.version}</version>
 		</dependency>
 
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-python_2.10</artifactId>
-			<version>${project.version}</version>
-		</dependency>
+		<!--<dependency>-->
+			<!--<groupId>org.apache.flink</groupId>-->
+			<!--<artifactId>flink-python_2.10</artifactId>-->
+			<!--<version>${project.version}</version>-->
+		<!--</dependency>-->
 
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-scala-shell_2.10</artifactId>
-			<version>${project.version}</version>
-		</dependency>
+		<!--<dependency>-->
+			<!--<groupId>org.apache.flink</groupId>-->
+			<!--<artifactId>flink-scala-shell_2.10</artifactId>-->
+			<!--<version>${project.version}</version>-->
+		<!--</dependency>-->
 
 		<dependency>
 			<groupId>org.apache.flink</groupId>
@@ -127,11 +127,11 @@ under the License.
 			<!--<version>${project.version}</version>-->
 		<!--</dependency>-->
 
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-statebackend-rocksdb_2.10</artifactId>
-			<version>${project.version}</version>
-		</dependency>
+		<!--<dependency>-->
+			<!--<groupId>org.apache.flink</groupId>-->
+			<!--<artifactId>flink-statebackend-rocksdb_2.10</artifactId>-->
+			<!--<version>${project.version}</version>-->
+		<!--</dependency>-->
 
 		<dependency>
 			<groupId>org.apache.flink</groupId>
@@ -161,12 +161,12 @@ under the License.
 			they are not included into the 'flink-dist' uber jar.
 		-->
 
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-gelly-examples_2.10</artifactId>
-			<version>${project.version}</version>
-			<scope>provided</scope>
-		</dependency>
+		<!--<dependency>-->
+			<!--<groupId>org.apache.flink</groupId>-->
+			<!--<artifactId>flink-gelly-examples_2.10</artifactId>-->
+			<!--<version>${project.version}</version>-->
+			<!--<scope>provided</scope>-->
+		<!--</dependency>-->
 
 		<!--
 			The following dependencies are packaged in 'opt/' 
