@@ -101,6 +101,7 @@ public class TaskManagerComponentsStartupShutdownTest {
 
 			// create the components for the TaskManager manually
 			final TaskManagerConfiguration tmConfig = new TaskManagerConfiguration(
+				false,
 				numberOfSlots,
 				TMP_DIR,
 				timeout,
