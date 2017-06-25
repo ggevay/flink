@@ -1204,9 +1204,13 @@ class TaskManager(
           throw new IOException("Could not deserialize the job information.", e)
       }
 
-      val cflMan = CFLManager.getSing
-      assert(cflMan != null) // mert mar a TM indulasakor letrehoztuk
-      cflMan.setJobID(jobInformation.getJobId)
+      if (!config.cflManDeactivated) {
+        val cflMan = CFLManager.getSing
+        assert(cflMan != null) // mert mar a TM indulasakor letrehoztuk
+        cflMan.setJobID(jobInformation.getJobId)
+      } else {
+        log.info("cflManDeactivated!")
+      }
 
       val taskInformation = try {
         tdd.getSerializedTaskInformation.deserializeValue(getClass.getClassLoader)
