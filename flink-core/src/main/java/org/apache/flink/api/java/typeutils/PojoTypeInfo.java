@@ -43,6 +43,11 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import org.apache.flink.util.InstantiationUtil;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -304,9 +309,23 @@ public class PojoTypeInfo<T> extends CompositeType<T> {
 		return -1;
 	}
 
+	///
+	static Map<Class<?>, Class<? extends TypeSerializer>> customSerializers = new HashMap<>();
+
+	public static <C, S extends TypeSerializer<C>> void registerCustomSerializer(Class<C> c, Class<S> s) {
+		customSerializers.put(c, s);
+	}
+	///
+
 	@Override
 	@PublicEvolving
 	public TypeSerializer<T> createSerializer(ExecutionConfig config) {
+		///
+		if(customSerializers.containsKey(this.getTypeClass())) {
+			return InstantiationUtil.instantiate(customSerializers.get(this.getTypeClass()));
+		}
+		///
+
 		if (config.isForceKryoEnabled()) {
 			return new KryoSerializer<T>(getTypeClass(), config);
 		}
