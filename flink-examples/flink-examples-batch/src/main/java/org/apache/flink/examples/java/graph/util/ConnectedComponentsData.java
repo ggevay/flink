@@ -59,14 +59,54 @@ public class ConnectedComponentsData {
 		new Object[]{1L, 15L},
 		new Object[]{16L, 1L}
 	};
-	
+
 	public static DataSet<Tuple2<Long, Long>> getDefaultEdgeDataSet(ExecutionEnvironment env) {
-		
+
 		List<Tuple2<Long, Long>> edgeList = new LinkedList<Tuple2<Long, Long>>();
 		for (Object[] edge : EDGES) {
 			edgeList.add(new Tuple2<Long, Long>((Long) edge[0], (Long) edge[1]));
 		}
 		return env.fromCollection(edgeList);
 	}
-	
+
+
+
+
+
+	public static final int[] VERTICESi  = new int[] {
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+
+	public static DataSet<Integer> getDefaultVertexDataSeti(ExecutionEnvironment env) {
+		List<Integer> verticesList = new LinkedList<>();
+		for (int vertexId : VERTICESi) {
+			verticesList.add(vertexId);
+		}
+		return env.fromCollection(verticesList);
+	}
+
+	public static final Object[][] EDGESi = new Object[][] {
+			new Object[]{1, 2},
+			new Object[]{2, 3},
+			new Object[]{2, 4},
+			new Object[]{3, 5},
+			new Object[]{6, 7},
+			new Object[]{8, 9},
+			new Object[]{8, 10},
+			new Object[]{5, 11},
+			new Object[]{11, 12},
+			new Object[]{10, 13},
+			new Object[]{9, 14},
+			new Object[]{13, 14},
+			new Object[]{1, 15},
+			new Object[]{16, 1}
+	};
+
+	public static DataSet<Tuple2<Integer, Integer>> getDefaultEdgeDataSeti(ExecutionEnvironment env) {
+
+		List<Tuple2<Integer, Integer>> edgeList = new LinkedList<Tuple2<Integer, Integer>>();
+		for (Object[] edge : EDGES) {
+			edgeList.add(new Tuple2<Integer, Integer>((Integer) edge[0], (Integer) edge[1]));
+		}
+		return env.fromCollection(edgeList);
+	}
 }
