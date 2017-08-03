@@ -129,6 +129,10 @@ under the License.
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <recompileMode>incremental</recompileMode>
+                    <useZincServer>true</useZincServer>
+                </configuration>
             </plugin>
             
 			<!-- Scala Code Style, most of the configuration done via plugin management -->

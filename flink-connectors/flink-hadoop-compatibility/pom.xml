@@ -112,6 +112,8 @@ under the License.
 						<jvmArg>-Xms128m</jvmArg>
 						<jvmArg>-Xmx512m</jvmArg>
 					</jvmArgs>
+					<recompileMode>incremental</recompileMode>
+					<useZincServer>true</useZincServer>
 				</configuration>
 			</plugin>
 

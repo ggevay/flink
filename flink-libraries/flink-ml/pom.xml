@@ -137,6 +137,10 @@
 						</goals>
 					</execution>
 				</executions>
+				<configuration>
+					<recompileMode>incremental</recompileMode>
+					<useZincServer>true</useZincServer>
+				</configuration>
 			</plugin>
 
 			<plugin>

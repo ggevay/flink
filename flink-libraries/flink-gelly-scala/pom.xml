@@ -140,6 +140,8 @@ under the License.
                             <version>${scala.macros.version}</version>
                         </compilerPlugin>
                     </compilerPlugins>
+                    <recompileMode>incremental</recompileMode>
+                    <useZincServer>true</useZincServer>
                 </configuration>
             </plugin>
 
