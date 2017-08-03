@@ -387,6 +387,8 @@ under the License.
 					<jvmArgs>
 						<jvmArg>-Xms128m</jvmArg>
 						<jvmArg>-Xmx512m</jvmArg>
+						<recompileMode>incremental</recompileMode>
+						<useZincServer>true</useZincServer>
 					</jvmArgs>
 				</configuration>
 			</plugin>
