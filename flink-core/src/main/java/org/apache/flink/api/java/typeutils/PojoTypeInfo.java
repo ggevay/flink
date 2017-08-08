@@ -35,7 +35,12 @@ import org.apache.flink.util.InstantiationUtil;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -51,12 +56,12 @@ import static org.apache.flink.util.Preconditions.checkState;
  *   <li>It has a public no-argument constructor.</li>
  *   <li>All fields are either public, or have public getters and setters.</li>
  * </ul>
- * 
+ *
  * @param <T> The type represented by this type information.
  */
 @Public
 public class PojoTypeInfo<T> extends CompositeType<T> {
-	
+
 	private static final long serialVersionUID = 1L;
 
 	private final static String REGEX_FIELD = "[\\p{L}_\\$][\\p{L}\\p{Digit}_\\$]*";
@@ -69,7 +74,7 @@ public class PojoTypeInfo<T> extends CompositeType<T> {
 	private static final Pattern PATTERN_NESTED_FIELDS_WILDCARD = Pattern.compile(REGEX_NESTED_FIELDS_WILDCARD);
 
 	private final PojoField[] fields;
-	
+
 	private final int totalFields;
 
 	@PublicEvolving
@@ -115,7 +120,7 @@ public class PojoTypeInfo<T> extends CompositeType<T> {
 	public int getArity() {
 		return fields.length;
 	}
-	
+
 	@Override
 	@PublicEvolving
 	public int getTotalFields() {
@@ -130,7 +135,7 @@ public class PojoTypeInfo<T> extends CompositeType<T> {
 		//   gives only some undefined order.
 		return false;
 	}
-	
+
 
 	@Override
 	@PublicEvolving
@@ -344,7 +349,7 @@ public class PojoTypeInfo<T> extends CompositeType<T> {
 
 		return new PojoSerializer<T>(getTypeClass(), fieldSerializers, reflectiveFields, config);
 	}
-	
+
 	@Override
 	public boolean equals(Object obj) {
 		if (obj instanceof PojoTypeInfo) {
@@ -359,7 +364,7 @@ public class PojoTypeInfo<T> extends CompositeType<T> {
 			return false;
 		}
 	}
-	
+
 	@Override
 	public int hashCode() {
 		return 31 * (31 * Arrays.hashCode(fields) + totalFields) + super.hashCode();
@@ -369,7 +374,7 @@ public class PojoTypeInfo<T> extends CompositeType<T> {
 	public boolean canEqual(Object obj) {
 		return obj instanceof PojoTypeInfo;
 	}
-	
+
 	@Override
 	public String toString() {
 		List<String> fieldStrings = new ArrayList<String>();
