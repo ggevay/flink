@@ -57,7 +57,7 @@ public class SingleOutputStreamOperator<T> extends DataStream<T> {
 	 */
 	private Map<OutputTag<?>, TypeInformation> requestedSideOutputs = new HashMap<>();
 
-	protected SingleOutputStreamOperator(StreamExecutionEnvironment environment, StreamTransformation<T> transformation) {
+	public SingleOutputStreamOperator(StreamExecutionEnvironment environment, StreamTransformation<T> transformation) {
 		super(environment, transformation);
 	}
 
@@ -408,7 +408,7 @@ public class SingleOutputStreamOperator<T> extends DataStream<T> {
 	// ------------------------------------------------------------------------
 
 	@Override
-	public DataStream<T> setConnectionType(StreamPartitioner<T> partitioner) {
+	public SingleOutputStreamOperator<T> setConnectionType(StreamPartitioner<T> partitioner) {
 		return new SingleOutputStreamOperator<>(this.getExecutionEnvironment(), new PartitionTransformation<>(this.getTransformation(), partitioner));
 	}
 
