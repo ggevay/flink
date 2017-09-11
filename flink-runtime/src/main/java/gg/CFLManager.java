@@ -138,6 +138,10 @@ public class CFLManager {
 
 	public void setJobID(JobID jobID) {
 		LOG.info("CFLManager.setJobID to '" + jobID + "'");
+		if (this.jobID == null) {
+			System.gc();
+			System.gc();
+		}
 		if (this.jobID != null && !this.jobID.equals(jobID) && jobID != null) {
 			throw new RuntimeException("Csak egy job futhat egyszerre. (old: " + this.jobID + ", new: " + jobID + ")");
 			// amugy ez akkor is triggerelodik, ha nem CFL-es jobok akar csak egymas utan tobb akarna futni
