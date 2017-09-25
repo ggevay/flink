@@ -19,10 +19,12 @@
 package org.apache.flink.examples.java.wordcount;
 
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.examples.java.wordcount.util.WordCountData;
 import org.apache.flink.util.Collector;
 
@@ -57,37 +59,65 @@ public class WordCount {
 		// set up the execution environment
 		final ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 
-		// make parameters available in the web interface
-		env.getConfig().setGlobalJobParameters(params);
 
-		// get input data
-		DataSet<String> text;
-		if (params.has("input")) {
-			// read the text file from given input path
-			text = env.readTextFile(params.get("input"));
-		} else {
-			// get default test text data
-			System.out.println("Executing WordCount example with default input data set.");
-			System.out.println("Use --input to specify file input.");
-			text = WordCountData.getDefaultTextLineDataSet(env);
+
+		DataSet<Integer> input = env.fromElements(1,2,3);
+
+		// Note:
+		//  - with >64, it throws "CompilerException: Cannot currently handle nodes with more than 64 outputs",
+		//    which is at least a clear error msg, and helps the user avoid the issue
+		//  - with <64 it works
+		//  - with 64, it throws this confusing error:
+		//    "CompilerException: Bug: Logic for branching plans (non-tree plans) has an error, and does not track the re-joining of branches correctly."
+		//    (Note that there is actually no re-joining going on in the plan)
+		for (Integer i = 0; i < 64; i++) {
+
+			// Identity Map
+			DataSet<Integer> mapped = input.map(new MapFunction<Integer, Integer>() {
+				@Override
+				public Integer map(Integer value) throws Exception {
+					return value;
+				}
+			});
+
+			mapped.writeAsText("/tmp/xxx/" + i, FileSystem.WriteMode.OVERWRITE);
 		}
 
-		DataSet<Tuple2<String, Integer>> counts =
-				// split up the lines in pairs (2-tuples) containing: (word,1)
-				text.flatMap(new Tokenizer())
-				// group by the tuple field "0" and sum up tuple field "1"
-				.groupBy(0)
-				.sum(1);
+		env.execute();
 
-		// emit result
-		if (params.has("output")) {
-			counts.writeAsCsv(params.get("output"), "\n", " ");
-			// execute program
-			env.execute("WordCount Example");
-		} else {
-			System.out.println("Printing result to stdout. Use --output to specify output path.");
-			counts.print();
-		}
+
+
+//		// make parameters available in the web interface
+//		env.getConfig().setGlobalJobParameters(params);
+//
+//		// get input data
+//		DataSet<String> text;
+//		if (params.has("input")) {
+//			// read the text file from given input path
+//			text = env.readTextFile(params.get("input"));
+//		} else {
+//			// get default test text data
+//			System.out.println("Executing WordCount example with default input data set.");
+//			System.out.println("Use --input to specify file input.");
+//			text = WordCountData.getDefaultTextLineDataSet(env);
+//		}
+//
+//		DataSet<Tuple2<String, Integer>> counts =
+//				// split up the lines in pairs (2-tuples) containing: (word,1)
+//				text.flatMap(new Tokenizer())
+//				// group by the tuple field "0" and sum up tuple field "1"
+//				.groupBy(0)
+//				.sum(1);
+//
+//		// emit result
+//		if (params.has("output")) {
+//			counts.writeAsCsv(params.get("output"), "\n", " ");
+//			// execute program
+//			env.execute("WordCount Example");
+//		} else {
+//			System.out.println("Printing result to stdout. Use --output to specify output path.");
+//			counts.print();
+//		}
 
 	}
 
