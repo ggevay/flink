@@ -67,7 +67,6 @@ public class MultipleProgramsTestBase extends TestBaseUtils {
 	public enum TestExecutionMode {
 		CLUSTER,
 		CLUSTER_OBJECT_REUSE,
-		CLUSTER_SORTER_CODEGEN, // code generation for sorters is enabled
 		COLLECTION
 	}
 
@@ -100,10 +99,6 @@ public class MultipleProgramsTestBase extends TestBaseUtils {
 				break;
 			case CLUSTER_OBJECT_REUSE:
 				new TestEnvironment(cluster, 4, true).setAsContext();
-				break;
-			case CLUSTER_SORTER_CODEGEN:
-				new TestEnvironment(cluster, 4, false, true).setAsContext();
-				SorterFactory.getInstance().forceCodeGeneration = true; // Fail fast if an error occurs with codegen
 				break;
 			case COLLECTION:
 				new CollectionTestEnvironment().setAsContext();
@@ -160,7 +155,6 @@ public class MultipleProgramsTestBase extends TestBaseUtils {
 	public static Collection<Object[]> executionModesWithSorterCodeGen() {
 		return Arrays.asList(
 				new Object[] { TestExecutionMode.CLUSTER },
-				new Object[] { TestExecutionMode.CLUSTER_SORTER_CODEGEN},
 				new Object[] { TestExecutionMode.COLLECTION });
 	}
 }
