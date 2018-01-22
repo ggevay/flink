@@ -31,64 +31,41 @@ import org.apache.flink.util.Collector;
 @SuppressWarnings("serial")
 public class ManyMaps {
 
+	private static int n = 20;
+
+	private static long[] times = new long[n];
 
 	public static void main(String[] args) throws Exception {
 
-		final ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+		for (int i=0; i<n; i++) {
+			run(i);
+		}
 
+		for (int i=0; i<n; i++) {
+			System.out.println(times[i]);
+		}
+	}
+
+
+
+	public static void run(int i) throws Exception {
+
+		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(1);
 
-
-
-
-		DataSet<Long> xs = env.generateSequence(1, 10*1000*1000);
-
-		//System.out.println(xs.count());
-
-//		DataSet<Long> ys = xs
-//				.map(new org.apache.flink.runtime.operators.Map1())
-//				.map(new org.apache.flink.runtime.operators.Map2())
-//				.map(new org.apache.flink.runtime.operators.Map3());
-//
-//		System.out.println(ys.count());
-
-
+		DataSet<Long> xs = env.generateSequence(1, 100*1000*1000);
 
 		xs.map(new org.apache.flink.runtime.operators.Map1()).output(new DiscardingOutputFormat<>());
 		xs.map(new org.apache.flink.runtime.operators.Map2()).output(new DiscardingOutputFormat<>());
 		xs.map(new org.apache.flink.runtime.operators.Map3()).output(new DiscardingOutputFormat<>());
 
 
-		long start = System.currentTimeMillis();
+		long start = System.nanoTime();
 		env.execute();
-		long end = System.currentTimeMillis();
-		System.out.println(end - start);
+		long end = System.nanoTime();
+		long elapsed = end - start;
+		System.out.println(elapsed);
+		times[i] = elapsed;
 	}
-
-
-
-//	public static final class Map1 implements MapFunction<Long, Long> {
-//
-//		@Override
-//		public Long map(Long value) {
-//			return value + 1;
-//		}
-//	}
-//
-//	public static final class Map2 implements MapFunction<Long, Long> {
-//
-//		@Override
-//		public Long map(Long value) {
-//			return value + 2;
-//		}
-//	}
-//
-//	public static final class Map3 implements MapFunction<Long, Long> {
-//
-//		@Override
-//		public Long map(Long value) {
-//			return value + 3;
-//		}
-//	}
 
 }
