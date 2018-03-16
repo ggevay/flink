@@ -84,7 +84,7 @@ public class MapDriver1<IT, OT> implements Driver<MapFunction<IT, OT>, OT> {
 		final Counter numRecordsOut = this.taskContext.getMetricGroup().getIOMetricGroup().getNumRecordsOutCounter();
 		// cache references on the stack
 		final MutableObjectIterator<IT> input = this.taskContext.getInput(0);
-		final MapFunction<IT, OT> function = (MapFunction<IT, OT>)new Map1();
+		final MapFunction<IT, OT> function = this.taskContext.getStub(); //(MapFunction<IT, OT>)new Map1();
 		final Collector<OT> output = new CountingCollector<>(this.taskContext.getOutputCollector(), numRecordsOut);
 
 		if (objectReuseEnabled) {
