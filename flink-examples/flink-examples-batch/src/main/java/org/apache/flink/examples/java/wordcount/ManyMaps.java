@@ -31,7 +31,7 @@ import org.apache.flink.util.Collector;
 @SuppressWarnings("serial")
 public class ManyMaps {
 
-	private static int n = 20;
+	private static int n = 1;
 
 	private static long[] times = new long[n];
 
@@ -64,7 +64,7 @@ public class ManyMaps {
 		env.execute();
 		long end = System.nanoTime();
 		long elapsed = end - start;
-		System.out.println(elapsed);
+		//System.out.println(elapsed);
 		times[i] = elapsed;
 	}
 
