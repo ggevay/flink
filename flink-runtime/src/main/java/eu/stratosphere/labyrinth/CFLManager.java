@@ -47,7 +47,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  *
@@ -630,6 +632,8 @@ public class CFLManager {
 		for (Integer copID: s.consumedBy) {
 			checkForClosingConsumed(bagID, s, bagConsumedStatuses.get(new BagIDAndOpID(bagID, copID)), copID);
 		}
+
+		updateLowCfl(bagID.cflSize, opID, subtaskIndex);
     }
 
     private void checkForClosingProduced(BagID bagID, BagStatus s, int para, int opID) {
@@ -801,6 +805,83 @@ public class CFLManager {
 		tm.CFLVoteStop();
 		setJobID(null);
 		reset();
+	}
+
+	private static class OpIdSubtaskIndex {
+
+		public int opID;
+		public int subtaskIndex;
+
+		public OpIdSubtaskIndex(int opID, int subtaskIndex) {
+			this.opID = opID;
+			this.subtaskIndex = subtaskIndex;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			OpIdSubtaskIndex that = (OpIdSubtaskIndex) o;
+			return opID == that.opID &&
+					subtaskIndex == that.subtaskIndex;
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(opID, subtaskIndex);
+		}
+	}
+
+	private static class CflSizeOpIdSubtaskIndex {
+
+		public int cflSize;
+		public int opID;
+		public int subtaskIndex;
+
+		public CflSizeOpIdSubtaskIndex(int cflSize, int opID, int subtaskIndex) {
+			this.cflSize = cflSize;
+			this.opID = opID;
+			this.subtaskIndex = subtaskIndex;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			CflSizeOpIdSubtaskIndex that = (CflSizeOpIdSubtaskIndex) o;
+			return cflSize == that.cflSize &&
+					opID == that.opID &&
+					subtaskIndex == that.subtaskIndex;
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(cflSize, opID, subtaskIndex);
+		}
+	}
+
+	private HashMap<OpIdSubtaskIndex, Integer> lowCFLsMap = new HashMap<>();
+	private TreeSet<CflSizeOpIdSubtaskIndex> lowCFLsSet = new TreeSet<>(
+			Comparator.comparingInt((CflSizeOpIdSubtaskIndex x) -> x.cflSize)
+			.thenComparingInt(x->x.opID)
+			.thenComparingInt(x->x.subtaskIndex));
+	int lowCFL = -1;
+
+	private void updateLowCfl(int cflSize, int opID, int subtaskIndex) {
+		OpIdSubtaskIndex lowCFLsMapKey = new OpIdSubtaskIndex(opID, subtaskIndex);
+		Integer oldMapValue = lowCFLsMap.get(lowCFLsMapKey);
+		Integer newMapValue = cflSize;
+		lowCFLsMap.put(lowCFLsMapKey, newMapValue);
+		if (oldMapValue != null) {
+			lowCFLsSet.remove(new CflSizeOpIdSubtaskIndex(oldMapValue, opID, subtaskIndex));
+		}
+		lowCFLsSet.add(new CflSizeOpIdSubtaskIndex(newMapValue, opID, subtaskIndex));
+
+		int newLowCFL = lowCFLsSet.first().cflSize;
+		if (newLowCFL != lowCFL) {
+			lowCFL = newLowCFL;
+			//todo: broadcast it
+		}
 	}
 
     // --------------------------------
