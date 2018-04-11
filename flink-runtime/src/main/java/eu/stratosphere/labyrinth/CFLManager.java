@@ -57,7 +57,7 @@ public class CFLManager {
 
 	private static final boolean logCoord = false;
 
-	public static final boolean barrier = false; // barrier between iteration steps
+	public static final boolean barrier = true; // barrier between iteration steps
 
 	private static CFLManager sing = null;
 	public static CFLManager getSing() {return sing;}
@@ -513,7 +513,8 @@ public class CFLManager {
 
 	// -- Begin barrier stuff --
 	private final Map<Integer, Integer> barrierReached = new HashMap<>(); // CFLSize -> Int: mely steppel hanyan vegeztek
-	private static final Set<Integer> opsInLoop = new HashSet<>(Arrays.asList(15,5,6,7,10,11,16));
+	//private static final Set<Integer> opsInLoop = new HashSet<>(Arrays.asList(15,5,6,7,10,11,16)); // ConnectedComponents
+	private static final Set<Integer> opsInLoop = new HashSet<>(Arrays.asList(2,3,4,5,6,7,8,9)); // ClickCountNoJoin
 	// -- End   barrier stuff --
 
 	private final AtomicInteger waitingInSendToCoordinator = new AtomicInteger(0);
