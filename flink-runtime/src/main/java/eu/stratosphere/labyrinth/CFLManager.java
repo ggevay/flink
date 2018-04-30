@@ -257,11 +257,15 @@ public class CFLManager {
 				try {
 					InputStream ins = new BufferedInputStream(socket.getInputStream());
 					DataInputViewStreamWrapper divsw = new DataInputViewStreamWrapper(ins);
-					//Msg reuse = msgSer.createInstance();
 					while (true) {
 
-						Msg msg = msgSer.deserialize(divsw);
-						//Msg msg = msgSer.deserialize(reuse, divsw);
+						//Msg msg = msgSer.deserialize(divsw);
+
+						// Vigyazat, itt lenyeges, hogy a reuse minden fieldje null, ugyanis igy createInstance-elodni fog a megfelelo field.
+						// Ez azert fontos, mert elrakjuk a belso objektumokat, vagyis baj lenne, ha felulirodnanak.
+						// (Ugyebar annyit nyerunk meg igy is azzal szemben, ha a nem reuse-olos overloadot hasznalnank, hogy igy csak egy field peldanyosodik.)
+						Msg reuse = new Msg();
+						Msg msg = msgSer.deserialize(reuse, divsw);
 						//msg.assertOK();
 
 						//synchronized (CFLManager.this) {
