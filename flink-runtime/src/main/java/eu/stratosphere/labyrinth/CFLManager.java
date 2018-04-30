@@ -18,6 +18,8 @@
 
 package eu.stratosphere.labyrinth;
 
+import it.unimi.dsi.fastutil.Hash;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -258,8 +260,10 @@ public class CFLManager {
 				try {
 					InputStream ins = socket.getInputStream();
 					DataInputViewStreamWrapper divsw = new DataInputViewStreamWrapper(ins);
+					Msg reuse = msgSer.createInstance();
 					while (true) {
 						Msg msg = msgSer.deserialize(divsw);
+						//Msg msg = msgSer.deserialize(reuse, divsw);
 						//synchronized (CFLManager.this) {
 							if (logCoord) LOG.info("Got " + msg);
 
@@ -337,13 +341,18 @@ public class CFLManager {
 		return curCFL.size() > 0 && curCFL.get(curCFL.size() - 1) == terminalBB;
 	}
 
+	private int prevCallbacksSize = -1;
+
 	private synchronized void notifyCallbacks() {
-		callbacks.sort(new Comparator<CFLCallback>() {
-			@Override
-			public int compare(CFLCallback o1, CFLCallback o2) {
-				return -Integer.compare(o1.getOpID(), o2.getOpID());
-			}
-		});
+		if (callbacks.size() != prevCallbacksSize) {
+			prevCallbacksSize = callbacks.size();
+			callbacks.sort(new Comparator<CFLCallback>() {
+				@Override
+				public int compare(CFLCallback o1, CFLCallback o2) {
+					return -Integer.compare(o1.getOpID(), o2.getOpID());
+				}
+			});
+		}
 
 		for (CFLCallback cb: callbacks) {
 			cb.notify(curCFL);
@@ -477,11 +486,11 @@ public class CFLManager {
         public int numProduced = 0;
 		public boolean produceClosed = false;
 
-		public Set<Integer> producedSubtasks = new HashSet<>();
+		public final IntOpenHashSet producedSubtasks = new IntOpenHashSet(200, Hash.VERY_FAST_LOAD_FACTOR);
 
 		public Set<BagID> inputs = new HashSet<>();
 		public Set<BagID> inputTo = new HashSet<>();
-		public Set<Integer> consumedBy = new HashSet<>();
+		public final IntOpenHashSet consumedBy = new IntOpenHashSet(4, Hash.VERY_FAST_LOAD_FACTOR);
 
 		public int para = -2;
     }
@@ -491,7 +500,7 @@ public class CFLManager {
 		public int numConsumed = 0;
 		public boolean consumeClosed = false;
 
-		public Set<Integer> consumedSubtasks = new HashSet<>();
+		public final IntOpenHashSet consumedSubtasks = new IntOpenHashSet(200, Hash.VERY_FAST_LOAD_FACTOR);
 	}
 
     private final Map<BagID, BagStatus> bagStatuses = new HashMap<>();
@@ -667,7 +676,7 @@ public class CFLManager {
 			if (!s.produceClosed) {
 				boolean needMore = false;
 				// Ebbe rakjuk ossze az inputok consumedSubtasks-jait
-				Set<Integer> needProduced = new HashSet<>();
+				IntOpenHashSet needProduced = new IntOpenHashSet(200, Hash.VERY_FAST_LOAD_FACTOR);
 				for (BagID inp : s.inputs) {
 					if (emptyBags.contains(inp)) {
 						// enelkul olyankor lenne gond, ha egy binaris operator egyik inputja ures, emiatt a closeInputBag
