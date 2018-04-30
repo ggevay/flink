@@ -43,7 +43,7 @@ class SequenceNumberingViewReader implements BufferAvailabilityListener {
 
 	private final InputChannelID receiverId;
 
-	private final AtomicLong numBuffersAvailable = new AtomicLong();
+	public final AtomicLong numBuffersAvailable = new AtomicLong();
 
 	private final PartitionRequestQueue requestQueue;
 
@@ -119,6 +119,7 @@ class SequenceNumberingViewReader implements BufferAvailabilityListener {
 
 	@Override
 	public void notifyBuffersAvailable(long numBuffers) {
+		//System.out.println("SequenceNumberingViewReader.notifyBuffersAvailable -- numBuffersAvailable: " + numBuffersAvailable.get() + numBuffers);
 		// if this request made the channel non-empty, notify the input gate
 		if (numBuffers > 0 && numBuffersAvailable.getAndAdd(numBuffers) == 0) {
 			requestQueue.notifyReaderNonEmpty(this);
