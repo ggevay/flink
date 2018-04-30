@@ -503,7 +503,7 @@ public class CFLManager {
 		public final BitSet consumedSubtasks = new BitSet(200);
 	}
 
-    private final Map<BagID, BagStatus> bagStatuses = new HashMap<>();
+    private final BagIdToObjectMap<BagStatus> bagStatuses = new BagIdToObjectMap<>();
 
 	private final Map<BagIDAndOpID, BagConsumptionStatus> bagConsumedStatuses = new HashMap<>();
 
