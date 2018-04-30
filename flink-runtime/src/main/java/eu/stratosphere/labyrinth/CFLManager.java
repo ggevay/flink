@@ -505,7 +505,7 @@ public class CFLManager {
 
     private final BagIdToObjectMap<BagStatus> bagStatuses = new BagIdToObjectMap<>();
 
-	private final Map<BagIDAndOpID, BagConsumptionStatus> bagConsumedStatuses = new HashMap<>();
+	private final BagIDAndOpIDToObjectMap<BagConsumptionStatus> bagConsumedStatuses = new BagIDAndOpIDToObjectMap<>();
 
 	private final Set<BagID> emptyBags = new HashSet<>();
 
