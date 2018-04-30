@@ -30,10 +30,7 @@ import org.apache.flink.util.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -183,7 +180,7 @@ public class CFLManager {
 					}
 				}
 				senderSockets[i] = socket; //new Socket(host, port);
-				senderStreams[i] = socket.getOutputStream();
+				senderStreams[i] = new BufferedOutputStream(socket.getOutputStream());
 				senderDataOutputViews[i] = new DataOutputViewStreamWrapper(senderStreams[i]);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
@@ -258,7 +255,7 @@ public class CFLManager {
 		public void run() {
 			try {
 				try {
-					InputStream ins = socket.getInputStream();
+					InputStream ins = new BufferedInputStream(socket.getInputStream());
 					DataInputViewStreamWrapper divsw = new DataInputViewStreamWrapper(ins);
 					//Msg reuse = msgSer.createInstance();
 					while (true) {
