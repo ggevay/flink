@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntConsumer;
 
 /**
  *
@@ -492,7 +493,7 @@ public class CFLManager {
 
 		public Set<BagID> inputs = new HashSet<>();
 		public Set<BagID> inputTo = new HashSet<>();
-		public final HashSet<Integer> consumedBy = new HashSet<>();
+		public final BitSet consumedBy = new BitSet();
 
 		public int para = -2;
     }
@@ -573,7 +574,7 @@ public class CFLManager {
 
 		assert !c.consumeClosed;
 
-		s.consumedBy.add(opID);
+		s.consumedBy.set(opID);
 
 		c.consumedSubtasks.set(subtaskIndex);
 
@@ -645,9 +646,17 @@ public class CFLManager {
 
 		checkForClosingProduced(bagID, s, para, opID);
 
-		for (Integer copID: s.consumedBy) {
-			checkForClosingConsumed(bagID, s, bagConsumedStatuses.get(new BagIDAndOpID(bagID, copID)), copID);
-		}
+//		for (Integer copID: s.consumedBy) {
+//			checkForClosingConsumed(bagID, s, bagConsumedStatuses.get(new BagIDAndOpID(bagID, copID)), copID);
+//		}
+
+		final BagStatus sf = s;
+		s.consumedBy.stream().forEach(new IntConsumer() {
+			@Override
+			public void accept(int copID) {
+				checkForClosingConsumed(bagID, sf, bagConsumedStatuses.get(new BagIDAndOpID(bagID, copID)), copID);
+			}
+		});
     }
 
     private void checkForClosingProduced(BagID bagID, BagStatus s, int para, int opID) {
