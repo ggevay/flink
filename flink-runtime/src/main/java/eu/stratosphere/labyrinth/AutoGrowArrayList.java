@@ -18,29 +18,34 @@
 
 package eu.stratosphere.labyrinth;
 
-public final class BagIdToObjectMap<T> {
+import java.util.ArrayList;
 
-    private final AutoGrowArrayList<AutoGrowArrayList<T>> map = new AutoGrowArrayList<>(3000);
+public final class AutoGrowArrayList<T> {
 
-    T get(BagID bid) {
-        AutoGrowArrayList<T> innerMap = map.get(bid.cflSize);
-        if (innerMap == null) {
-            return null;
-        } else {
-            return innerMap.get(bid.opID);
-        }
-    }
+	private final ArrayList<T> a;
 
-    void put(BagID bid, T v) {
-        AutoGrowArrayList<T> innerMap = map.get(bid.cflSize);
-        if (innerMap == null) {
-			innerMap = new AutoGrowArrayList<>(50);
-            map.put(bid.cflSize, innerMap);
-        }
-        innerMap.put(bid.opID, v);
-    }
+	AutoGrowArrayList(int s) {
+		a = new ArrayList<>(s);
+	}
 
-    void clear() {
-        map.clear();
-    }
+	T get(int i) {
+		ensureCapacity(i);
+		return a.get(i);
+	}
+
+	void put(int i, T v) {
+		ensureCapacity(i);
+		a.set(i, v);
+	}
+
+	void clear() {
+		a.clear();
+	}
+
+
+	private void ensureCapacity(int i) {
+		while (i >= a.size()) {
+			a.add(null);
+		}
+	}
 }

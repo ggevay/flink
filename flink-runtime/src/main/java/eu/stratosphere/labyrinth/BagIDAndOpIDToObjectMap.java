@@ -18,23 +18,20 @@
 
 package eu.stratosphere.labyrinth;
 
-import it.unimi.dsi.fastutil.Hash;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-
 public class BagIDAndOpIDToObjectMap<T> {
 
-    private final Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<T>>> map = new Int2ObjectOpenHashMap<>(3000, Hash.VERY_FAST_LOAD_FACTOR);
+    private final AutoGrowArrayList<AutoGrowArrayList<AutoGrowArrayList<T>>> map = new AutoGrowArrayList<>(3000);
 
     T get(BagIDAndOpID bidoid) {
         int key1 = bidoid.bagID.cflSize;
         int key2 = bidoid.bagID.opID;
         int key3 = bidoid.opID;
 
-        Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<T>> innerMap = map.get(key1);
+        AutoGrowArrayList<AutoGrowArrayList<T>> innerMap = map.get(key1);
         if (innerMap == null) {
             return null;
         } else {
-            Int2ObjectOpenHashMap<T> innerMap2 = innerMap.get(key2);
+            AutoGrowArrayList<T> innerMap2 = innerMap.get(key2);
             if (innerMap2 == null) {
                 return null;
             } else {
@@ -48,15 +45,15 @@ public class BagIDAndOpIDToObjectMap<T> {
         int key2 = bidoid.bagID.opID;
         int key3 = bidoid.opID;
 
-        Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<T>> innerMap = map.get(key1);
+        AutoGrowArrayList<AutoGrowArrayList<T>> innerMap = map.get(key1);
         if (innerMap == null) {
-            innerMap = new Int2ObjectOpenHashMap<>(50, Hash.VERY_FAST_LOAD_FACTOR);
+            innerMap = new AutoGrowArrayList<>(50);
             map.put(key1, innerMap);
         }
 
-        Int2ObjectOpenHashMap<T> innerMap2 = innerMap.get(key2);
+        AutoGrowArrayList<T> innerMap2 = innerMap.get(key2);
         if (innerMap2 == null) {
-            innerMap2 = new Int2ObjectOpenHashMap<>(50, Hash.VERY_FAST_LOAD_FACTOR);
+            innerMap2 = new AutoGrowArrayList<>(50);
             innerMap.put(key2, innerMap2);
         }
 
