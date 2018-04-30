@@ -48,6 +48,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -259,7 +260,7 @@ public class CFLManager {
 					DataInputViewStreamWrapper divsw = new DataInputViewStreamWrapper(ins);
 					while (true) {
 						Msg msg = msgSer.deserialize(divsw);
-						synchronized (CFLManager.this) {
+						//synchronized (CFLManager.this) {
 							if (logCoord) LOG.info("Got " + msg);
 
 							if (msg.jobCounter < jobCounter) {
@@ -294,7 +295,7 @@ public class CFLManager {
 							} else {
 								assert false;
 							}
-						}
+						//}
 					}
 				} catch (EOFException e) {
 					// This happens when the other TM shuts down. No need to throw a RuntimeException here, as we are shutting down anyway.
@@ -506,11 +507,17 @@ public class CFLManager {
 	private static final Set<Integer> opsInLoop = new HashSet<>(Arrays.asList(15,5,6,7,10,11,16));
 	// -- End   barrier stuff --
 
+	private final AtomicInteger waitingInSendToCoordinator = new AtomicInteger(0);
+
 	private void sendToCoordinator(Msg msg) {
+		waitingInSendToCoordinator.incrementAndGet();
 		synchronized (msgSendLock) {
+			waitingInSendToCoordinator.decrementAndGet();
 			try {
 				msgSer.serialize(msg, senderDataOutputViews[0]);
-				senderStreams[0].flush();
+				if (waitingInSendToCoordinator.get() == 0) {
+					senderStreams[0].flush();
+				}
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
