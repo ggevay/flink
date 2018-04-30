@@ -203,9 +203,36 @@ class PartitionRequestQueue extends ChannelInboundHandlerAdapter {
 							markAsReleased(reader.getReceiverId());
 						}
 
-						// Write and flush and wait until this is done before
-						// trying to continue with the next buffer.
-						channel.writeAndFlush(msg).addListener(writeListener);
+
+
+//						// Write and flush and wait until this is done before
+//						// trying to continue with the next buffer.
+//						channel.writeAndFlush(msg).addListener(writeListener);
+
+						//BetterWrite.write(channel, msg, writeListener);
+
+						channel.write(msg).addListener(writeListener);
+
+						if (reader.numBuffersAvailable.get() == 0 || !channel.isWritable() ) {
+							// no more buffers
+							//  -- OR --
+							// we made Netty's ChannelOutboundBuffer full by the last write
+							//   see
+							//     AbstractChannel.write -->
+							//     ChannelOutboundBuffer.addMessage -->
+							//     incrementPendingOutboundBytes -->
+							//     setUnwritable
+							channel.flush();
+						} else {
+							// WriteAndFlushNextMessageIfPossibleListener is triggered only when an msg is flushed.
+							// We haven't flushed yet, so we wouldn't automatically come around, so we have to manually call ourselves.
+
+							System.out.println("reader.numBuffersAvailable: " + reader.numBuffersAvailable.get());
+
+							writeAndFlushNextMessageIfPossible(channel);
+						}
+
+
 
 						return;
 					}
