@@ -18,8 +18,6 @@
 
 package eu.stratosphere.labyrinth;
 
-import it.unimi.dsi.fastutil.Hash;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -44,6 +42,7 @@ import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -489,11 +488,11 @@ public class CFLManager {
         public int numProduced = 0;
 		public boolean produceClosed = false;
 
-		public final IntOpenHashSet producedSubtasks = new IntOpenHashSet(200, Hash.VERY_FAST_LOAD_FACTOR);
+		public final BitSet producedSubtasks = new BitSet(200);
 
 		public Set<BagID> inputs = new HashSet<>();
 		public Set<BagID> inputTo = new HashSet<>();
-		public final IntOpenHashSet consumedBy = new IntOpenHashSet(4, Hash.VERY_FAST_LOAD_FACTOR);
+		public final HashSet<Integer> consumedBy = new HashSet<>();
 
 		public int para = -2;
     }
@@ -503,7 +502,7 @@ public class CFLManager {
 		public int numConsumed = 0;
 		public boolean consumeClosed = false;
 
-		public final IntOpenHashSet consumedSubtasks = new IntOpenHashSet(200, Hash.VERY_FAST_LOAD_FACTOR);
+		public final BitSet consumedSubtasks = new BitSet(200);
 	}
 
     private final Map<BagID, BagStatus> bagStatuses = new HashMap<>();
@@ -576,7 +575,7 @@ public class CFLManager {
 
 		s.consumedBy.add(opID);
 
-		c.consumedSubtasks.add(subtaskIndex);
+		c.consumedSubtasks.set(subtaskIndex);
 
 		c.numConsumed += numElements;
 
@@ -641,8 +640,8 @@ public class CFLManager {
 		s.numProduced += numElements;
 
 		// Add to s.producedSubtasks
-		assert !s.producedSubtasks.contains(subtaskIndex);
-		s.producedSubtasks.add(subtaskIndex);
+		assert !s.producedSubtasks.get(subtaskIndex);
+		s.producedSubtasks.set(subtaskIndex);
 
 		checkForClosingProduced(bagID, s, para, opID);
 
@@ -659,7 +658,7 @@ public class CFLManager {
 		if (s.inputs.size() == 0) {
 			// source, tehat mindenhonnan varunk
 			assert para != -1;
-			int totalProducedMsgs = s.producedSubtasks.size();
+			int totalProducedMsgs = s.producedSubtasks.cardinality();
 			assert totalProducedMsgs <= para;
 			if (totalProducedMsgs == para) {
 				if (logCoord) LOG.info("checkForClosingProduced(" + bagID + ", " + s + ", opID = " + opID + "): produceClosed");
@@ -669,7 +668,7 @@ public class CFLManager {
 
 			// Az isEmpty produced-janak lezarasa vegett van most ez bent. Annak ugyebar 1 a para-ja, es onnan fog is kuldeni.
 			// (Itt lehetne kicsit szebben, hogy ne legyen kodduplikalas a fentebbi resszel.)
-			int totalProducedMsgs = s.producedSubtasks.size();
+			int totalProducedMsgs = s.producedSubtasks.cardinality();
 			assert totalProducedMsgs <= para;
 			if (totalProducedMsgs == para) {
 				if (logCoord) LOG.info("checkForClosingProduced(" + bagID + ", " + s + ", opID = " + opID + "): produceClosed, because totalProducedMsgs == para");
@@ -679,14 +678,14 @@ public class CFLManager {
 			if (!s.produceClosed) {
 				boolean needMore = false;
 				// Ebbe rakjuk ossze az inputok consumedSubtasks-jait
-				IntOpenHashSet needProduced = new IntOpenHashSet(200, Hash.VERY_FAST_LOAD_FACTOR);
+				BitSet needProduced = new BitSet(200);
 				for (BagID inp : s.inputs) {
 					if (emptyBags.contains(inp)) {
 						// enelkul olyankor lenne gond, ha egy binaris operator egyik inputja ures, emiatt a closeInputBag
 						// mindegyik instance-t megloki, viszont a checkForClosingProduced csak a masik input alapjan nezi,
 						// hogy honnan kell jonni, es ezert nem szamit bizonyos jovesekre
 						for (int i=0; i< para; i++) {
-							needProduced.add(i);
+							needProduced.set(i);
 						}
 					}
 					BagConsumptionStatus bcs = bagConsumedStatuses.get(new BagIDAndOpID(inp, opID));
@@ -697,7 +696,8 @@ public class CFLManager {
 							needMore = true;
 							break;
 						}
-						needProduced.addAll(bcs.consumedSubtasks);
+						//needProduced.addAll(bcs.consumedSubtasks);
+						needProduced.or(bcs.consumedSubtasks);
 					} else {
 						// Maybe we run into trouble here if this happens because we have a binary operator that sends produced while it haven't yet consumed from one of its inputs.
 						// Hm, but actually I don't think I have such an operator at the moment.   Ez kozben mar nem ervenyes
@@ -708,8 +708,8 @@ public class CFLManager {
 					}
 				}
 				if (!needMore && !s.produceClosed) {
-					int needed = needProduced.size();
-					int actual = s.producedSubtasks.size();
+					int needed = needProduced.cardinality();
+					int actual = s.producedSubtasks.cardinality();
 					assert actual <= needed || needed == 0; // This should be true, because we have already checked consumeClose above. (needed == 0 when responding to empty input bags)
 					if (actual < needed) {
 						if (logCoord)
