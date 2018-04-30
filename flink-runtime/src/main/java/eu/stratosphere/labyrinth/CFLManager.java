@@ -260,10 +260,13 @@ public class CFLManager {
 				try {
 					InputStream ins = socket.getInputStream();
 					DataInputViewStreamWrapper divsw = new DataInputViewStreamWrapper(ins);
-					Msg reuse = msgSer.createInstance();
+					//Msg reuse = msgSer.createInstance();
 					while (true) {
+
 						Msg msg = msgSer.deserialize(divsw);
 						//Msg msg = msgSer.deserialize(reuse, divsw);
+						//msg.assertOK();
+
 						//synchronized (CFLManager.this) {
 							if (logCoord) LOG.info("Got " + msg);
 
@@ -834,6 +837,24 @@ public class CFLManager {
 		public BarrierAllReached barrierAllReached;
 		public VoteStop voteStop;
 		public Stop stop;
+
+		void assertOK() {
+			int c = 0;
+
+			if (cflElement != null) c++;
+			if (consumed != null) c++;
+			if (produced != null) c++;
+			if (closeInputBag != null) c++;
+			if (subscribeCnt != null) c++;
+			if (barrierAllReached != null) c++;
+			if (voteStop != null) c++;
+			if (stop != null) c++;
+
+			if (c != 1) {
+				LOG.error("Corrupted msg: " + this.toString());
+			}
+			assert c == 1;
+		}
 
 		public Msg() {}
 
