@@ -39,13 +39,6 @@ under the License.
 
 	<dependencies>
 
-		<!-- Labyrinth -->
-		<dependency>
-			<groupId>it.unimi.dsi</groupId>
-			<artifactId>fastutil</artifactId>
-			<version>8.1.0</version>
-		</dependency>
-
 		<!-- core dependencies -->
 
 		<dependency>
