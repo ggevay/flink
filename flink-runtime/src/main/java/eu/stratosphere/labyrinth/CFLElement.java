@@ -18,13 +18,28 @@
 
 package eu.stratosphere.labyrinth;
 
+import org.apache.flink.core.memory.DataInputView;
+import org.apache.flink.core.memory.DataOutputView;
+
+import java.io.IOException;
+
 /**
  *
  */
-public class CFLElement {
+public final class CFLElement {
 
 	public int seqNum;
 	public int bbId;
+
+	public void serialize(DataOutputView target) throws IOException {
+		target.writeInt(seqNum);
+		target.writeInt(bbId);
+	}
+
+	public static void deserialize(CFLElement r, DataInputView src) throws IOException {
+		r.seqNum = src.readInt();
+		r.bbId = src.readInt();
+	}
 
 	public CFLElement() {}
 

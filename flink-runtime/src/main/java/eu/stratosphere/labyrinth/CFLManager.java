@@ -22,13 +22,16 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
+import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.taskmanager.TaskManager;
 import org.apache.flink.util.ExceptionUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.*;
 import java.net.ConnectException;
@@ -194,7 +197,8 @@ public class CFLManager {
 	private void sendElement(CFLElement e) {
 		for (int i = 0; i<hosts.length; i++) {
 			try {
-				msgSer.serialize(new Msg(jobCounter, e), senderDataOutputViews[i]);
+				//msgSer.serialize(new Msg(jobCounter, e), senderDataOutputViews[i]);
+				new Msg(jobCounter, e).serialize(senderDataOutputViews[i]);
 				senderStreams[i].flush();
 			} catch (IOException e1) {
 				throw new RuntimeException(e1);
@@ -264,9 +268,12 @@ public class CFLManager {
 						// Vigyazat, itt lenyeges, hogy a reuse minden fieldje null, ugyanis igy createInstance-elodni fog a megfelelo field.
 						// Ez azert fontos, mert elrakjuk a belso objektumokat, vagyis baj lenne, ha felulirodnanak.
 						// (Ugyebar annyit nyerunk meg igy is azzal szemben, ha a nem reuse-olos overloadot hasznalnank, hogy igy csak egy field peldanyosodik.)
-						Msg reuse = new Msg();
-						Msg msg = msgSer.deserialize(reuse, divsw);
-						//msg.assertOK();
+						//Msg reuse = new Msg();
+						//Msg msg = msgSer.deserialize(reuse, divsw);
+
+						Msg msg = new Msg();
+						Msg.deserialize(msg, divsw);
+						msg.assertOK();
 
 						//synchronized (CFLManager.this) {
 							if (logCoord) LOG.info("Got " + msg);
@@ -528,7 +535,8 @@ public class CFLManager {
 		synchronized (msgSendLock) {
 			waitingInSendToCoordinator.decrementAndGet();
 			try {
-				msgSer.serialize(msg, senderDataOutputViews[0]);
+				//msgSer.serialize(msg, senderDataOutputViews[0]);
+				msg.serialize(senderDataOutputViews[0]);
 				if (waitingInSendToCoordinator.get() == 0) {
 					senderStreams[0].flush();
 				}
@@ -542,7 +550,8 @@ public class CFLManager {
 		synchronized (msgSendLock) {
 			for (int i = 0; i < hosts.length; i++) {
 				try {
-					msgSer.serialize(msg, senderDataOutputViews[i]);
+					//msgSer.serialize(msg, senderDataOutputViews[i]);
+					msg.serialize(senderDataOutputViews[i]);
 					senderStreams[i].flush();
 				} catch (IOException e) {
 					throw new RuntimeException(e);
@@ -837,7 +846,7 @@ public class CFLManager {
 
     // --------------------------------
 
-    public static class Msg {
+    public static final class Msg {
 
 		public short jobCounter;
 
@@ -850,6 +859,83 @@ public class CFLManager {
 		public BarrierAllReached barrierAllReached;
 		public VoteStop voteStop;
 		public Stop stop;
+
+
+		public void serialize(DataOutputView target) throws IOException {
+
+			target.writeShort(jobCounter);
+
+			if (cflElement != null) {
+				target.writeByte(0);
+				cflElement.serialize(target);
+			} else if (consumed != null) {
+				target.writeByte(1);
+				consumed.serialize(target);
+			} else if (produced != null) {
+				target.writeByte(2);
+				produced.serialize(target);
+			} else if (closeInputBag != null) {
+				target.writeByte(3);
+				closeInputBag.serialize(target);
+			} else if (subscribeCnt != null) {
+				target.writeByte(4);
+				subscribeCnt.serialize(target);
+			} else if (barrierAllReached != null) {
+				target.writeByte(5);
+				barrierAllReached.serialize(target);
+			} else if (voteStop != null) {
+				target.writeByte(6);
+				voteStop.serialize(target);
+			} else if (stop != null) {
+				target.writeByte(7);
+				stop.serialize(target);
+			}
+		}
+
+		/**
+		 * All fields of r should be null!
+		 */
+		public static void deserialize(Msg r, DataInputView src) throws IOException {
+
+			r.jobCounter = src.readShort();
+
+			byte c = src.readByte();
+			switch (c) {
+				case 0:
+					r.cflElement = new CFLElement();
+					CFLElement.deserialize(r.cflElement, src);
+					break;
+				case 1:
+					r.consumed = new Consumed();
+					Consumed.deserialize(r.consumed, src);
+					break;
+				case 2:
+					r.produced = new Produced();
+					Produced.deserialize(r.produced, src);
+					break;
+				case 3:
+					r.closeInputBag = new CloseInputBag();
+					CloseInputBag.deserialize(r.closeInputBag, src);
+					break;
+				case 4:
+					r.subscribeCnt = new SubscribeCnt();
+					SubscribeCnt.deserialize(r.subscribeCnt, src);
+					break;
+				case 5:
+					r.barrierAllReached = new BarrierAllReached();
+					BarrierAllReached.deserialize(r.barrierAllReached, src);
+					break;
+				case 6:
+					r.voteStop = new VoteStop();
+					VoteStop.deserialize(r.voteStop, src);
+					break;
+				case 7:
+					r.stop = new Stop();
+					Stop.deserialize(r.stop, src);
+					break;
+			}
+		}
+
 
 		void assertOK() {
 			int c = 0;
@@ -927,14 +1013,31 @@ public class CFLManager {
 		}
 	}
 
-	private static final TypeSerializer<Msg> msgSer = TypeInformation.of(Msg.class).createSerializer(new ExecutionConfig());
+	//private static final TypeSerializer<Msg> msgSer = TypeInformation.of(Msg.class).createSerializer(new ExecutionConfig());
 
-	public static class Consumed {
+	public static final class Consumed {
 
 		public BagID bagID;
 		public int numElements;
 		public short subtaskIndex;
 		public int opID;
+
+
+		public void serialize(DataOutputView target) throws IOException {
+			bagID.serialize(target);
+			target.writeInt(numElements);
+			target.writeShort(subtaskIndex);
+			target.writeInt(opID);
+		}
+
+		public static void deserialize(Consumed r, DataInputView src) throws IOException {
+			r.bagID = new BagID();
+			BagID.deserialize(r.bagID, src);
+			r.numElements = src.readInt();
+			r.subtaskIndex = src.readShort();
+			r.opID = src.readInt();
+		}
+
 
 		public Consumed() {}
 
@@ -956,7 +1059,7 @@ public class CFLManager {
 		}
 	}
 
-	public static class Produced {
+	public static final class Produced {
 
 		public BagID bagID;
 		public BagID[] inpIDs;
@@ -964,6 +1067,39 @@ public class CFLManager {
 		public short para;
 		public short subtaskIndex;
 		public int opID;
+
+
+		public void serialize(DataOutputView target) throws IOException {
+			bagID.serialize(target);
+			assert inpIDs.length <= Byte.MAX_VALUE;
+			target.writeByte(inpIDs.length);
+			for (BagID bid: inpIDs) {
+				bid.serialize(target);
+			}
+			target.writeInt(numElements);
+			target.writeShort(para);
+			target.writeShort(subtaskIndex);
+			target.writeInt(opID);
+		}
+
+		public static void deserialize(Produced r, DataInputView src) throws IOException {
+
+			r.bagID = new BagID();
+			BagID.deserialize(r.bagID, src);
+
+			byte l = src.readByte();
+			r.inpIDs = new BagID[l];
+			for (int i=0; i<l; i++) {
+				r.inpIDs[i] = new BagID();
+				BagID.deserialize(r.inpIDs[i], src);
+			}
+
+			r.numElements = src.readInt();
+			r.para = src.readShort();
+			r.subtaskIndex = src.readShort();
+			r.opID = src.readInt();
+		}
+
 
 		public Produced() {}
 
@@ -998,6 +1134,19 @@ public class CFLManager {
 		public BagID bagID;
 		public int opID;
 
+
+		public void serialize(DataOutputView target) throws IOException {
+			bagID.serialize(target);
+			target.writeInt(opID);
+		}
+
+		public static void deserialize(CloseInputBag r, DataInputView src) throws IOException {
+			r.bagID = new BagID();
+			BagID.deserialize(r.bagID, src);
+			r.opID = src.readInt();
+		}
+
+
 		public CloseInputBag() {}
 
 		public CloseInputBag(BagID bagID, int opID) {
@@ -1015,12 +1164,30 @@ public class CFLManager {
 	}
 
 	public static class SubscribeCnt {
-		public byte dummy; // To make it a POJO
+		public byte dummy; // To make it a POJO  (not serialized in the manual serializers!)
+
+		public void serialize(DataOutputView target) throws IOException {
+			// Nothing to do
+		}
+
+		public static void deserialize(SubscribeCnt r, DataInputView src) throws IOException {
+			// Nothing to do
+		}
 	}
 
 	public static class BarrierAllReached {
 
 		public int cflSize;
+
+
+		public void serialize(DataOutputView target) throws IOException {
+			target.writeInt(cflSize);
+		}
+
+		public static void deserialize(BarrierAllReached r, DataInputView src) throws IOException {
+			r.cflSize = src.readInt();
+		}
+
 
 		public BarrierAllReached() {}
 
@@ -1037,11 +1204,27 @@ public class CFLManager {
 	}
 
 	public static class VoteStop {
-		public byte dummy; // To make it a POJO
+		public byte dummy; // To make it a POJO  (not serialized in the manual serializers!)
+
+		public void serialize(DataOutputView target) throws IOException {
+			// Nothing to do
+		}
+
+		public static void deserialize(VoteStop r, DataInputView src) throws IOException {
+			// Nothing to do
+		}
 	}
 
 	public static class Stop {
-		public byte dummy; // To make it a POJO
+		public byte dummy; // To make it a POJO  (not serialized in the manual serializers!)
+
+		public void serialize(DataOutputView target) throws IOException {
+			// Nothing to do
+		}
+
+		public static void deserialize(Stop r, DataInputView src) throws IOException {
+			// Nothing to do
+		}
 	}
 
 	// --------------------------------
