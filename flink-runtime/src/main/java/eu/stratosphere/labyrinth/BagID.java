@@ -18,13 +18,30 @@
 
 package eu.stratosphere.labyrinth;
 
+import org.apache.flink.core.memory.DataInputView;
+import org.apache.flink.core.memory.DataOutputView;
+
+import java.io.IOException;
+
 /**
  *
  */
-public class BagID {
+public final class BagID {
 
 	public int cflSize;
 	public int opID;
+
+
+	public void serialize(DataOutputView target) throws IOException {
+		target.writeInt(cflSize);
+		target.writeInt(opID);
+	}
+
+	public static void deserialize(BagID r, DataInputView src) throws IOException {
+		r.cflSize = src.readInt();
+		r.opID = src.readInt();
+	}
+
 
 	public BagID() {}
 
