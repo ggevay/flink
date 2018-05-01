@@ -55,9 +55,9 @@ public class CFLManager {
 
 	protected static final Logger LOG = LoggerFactory.getLogger(CFLManager.class);
 
-	private static boolean logCoord = false;
+	private static final boolean logCoord = false;
 
-	public static boolean barrier = false; // barrier between iteration steps
+	public static final boolean barrier = false; // barrier between iteration steps
 
 	private static CFLManager sing = null;
 	public static CFLManager getSing() {return sing;}
