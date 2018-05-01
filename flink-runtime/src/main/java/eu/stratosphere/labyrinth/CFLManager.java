@@ -18,10 +18,7 @@
 
 package eu.stratosphere.labyrinth;
 
-import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.core.memory.DataOutputView;
@@ -31,7 +28,6 @@ import org.apache.flink.util.ExceptionUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.*;
 import java.net.ConnectException;
@@ -183,7 +179,7 @@ public class CFLManager {
 					}
 				}
 				senderSockets[i] = socket; //new Socket(host, port);
-				senderStreams[i] = new BufferedOutputStream(socket.getOutputStream());
+				senderStreams[i] = new BufferedOutputStream(socket.getOutputStream(), 32768);
 				senderDataOutputViews[i] = new DataOutputViewStreamWrapper(senderStreams[i]);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
@@ -197,7 +193,6 @@ public class CFLManager {
 	private void sendElement(CFLElement e) {
 		for (int i = 0; i<hosts.length; i++) {
 			try {
-				//msgSer.serialize(new Msg(jobCounter, e), senderDataOutputViews[i]);
 				new Msg(jobCounter, e).serialize(senderDataOutputViews[i]);
 				senderStreams[i].flush();
 			} catch (IOException e1) {
@@ -259,21 +254,14 @@ public class CFLManager {
 		public void run() {
 			try {
 				try {
-					InputStream ins = new BufferedInputStream(socket.getInputStream());
+					InputStream ins = new BufferedInputStream(socket.getInputStream(), 32768);
 					DataInputViewStreamWrapper divsw = new DataInputViewStreamWrapper(ins);
 					while (true) {
 
-						//Msg msg = msgSer.deserialize(divsw);
-
-						// Vigyazat, itt lenyeges, hogy a reuse minden fieldje null, ugyanis igy createInstance-elodni fog a megfelelo field.
-						// Ez azert fontos, mert elrakjuk a belso objektumokat, vagyis baj lenne, ha felulirodnanak.
-						// (Ugyebar annyit nyerunk meg igy is azzal szemben, ha a nem reuse-olos overloadot hasznalnank, hogy igy csak egy field peldanyosodik.)
-						//Msg reuse = new Msg();
-						//Msg msg = msgSer.deserialize(reuse, divsw);
-
+						// Vigyazat, itt lenyeges, hogy a reuse minden fieldje null!
 						Msg msg = new Msg();
 						Msg.deserialize(msg, divsw);
-						msg.assertOK();
+						//msg.assertOK();
 
 						//synchronized (CFLManager.this) {
 							if (logCoord) LOG.info("Got " + msg);
@@ -535,7 +523,6 @@ public class CFLManager {
 		synchronized (msgSendLock) {
 			waitingInSendToCoordinator.decrementAndGet();
 			try {
-				//msgSer.serialize(msg, senderDataOutputViews[0]);
 				msg.serialize(senderDataOutputViews[0]);
 				if (waitingInSendToCoordinator.get() == 0) {
 					senderStreams[0].flush();
@@ -550,7 +537,6 @@ public class CFLManager {
 		synchronized (msgSendLock) {
 			for (int i = 0; i < hosts.length; i++) {
 				try {
-					//msgSer.serialize(msg, senderDataOutputViews[i]);
 					msg.serialize(senderDataOutputViews[i]);
 					senderStreams[i].flush();
 				} catch (IOException e) {
@@ -1012,8 +998,6 @@ public class CFLManager {
 					'}';
 		}
 	}
-
-	//private static final TypeSerializer<Msg> msgSer = TypeInformation.of(Msg.class).createSerializer(new ExecutionConfig());
 
 	public static final class Consumed {
 
