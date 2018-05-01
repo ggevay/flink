@@ -130,7 +130,7 @@ public class CFLManager {
 	//   BagOperatorHost -> msgSendLock
 	private final Object msgSendLock = new Object();
 
-	private volatile int jobCounter = -10;
+	private volatile short jobCounter = -10;
 
 	public JobID getJobID() {
 		return jobID;
@@ -497,7 +497,7 @@ public class CFLManager {
 		public final ArrayList<BagID> inputToList = new ArrayList<>(16);
 		public final BitSet consumedBy = new BitSet();
 
-		public int para = -2;
+		public short para = -2;
     }
 
 	private static final class BagConsumptionStatus {
@@ -552,11 +552,11 @@ public class CFLManager {
 	}
 
     // kliens -> coordinator
-    public void consumedLocal(BagID bagID, int numElements, int subtaskIndex, int opID) {
+    public void consumedLocal(BagID bagID, int numElements, short subtaskIndex, int opID) {
     	sendToCoordinator(new Msg(jobCounter, new Consumed(bagID, numElements, subtaskIndex, opID)));
     }
 
-    private synchronized void consumedRemote(BagID bagID, int numElements, int subtaskIndex, int opID) {
+    private synchronized void consumedRemote(BagID bagID, int numElements, short subtaskIndex, int opID) {
 		if (logCoord) LOG.info("consumedRemote(bagID = " + bagID + ", numElements = " + numElements + ", opID = " + opID + ")");
 
 		// Get or init BagStatus
@@ -606,12 +606,12 @@ public class CFLManager {
 	}
 
     // kliens -> coordinator
-	public void producedLocal(BagID bagID, BagID[] inpIDs, int numElements, int para, int subtaskIndex, int opID) {
+	public void producedLocal(BagID bagID, BagID[] inpIDs, int numElements, short para, short subtaskIndex, int opID) {
 		assert inpIDs.length <= 2; // ha 0, akkor BagSource
 		sendToCoordinator(new Msg(jobCounter, new Produced(bagID, inpIDs, numElements, para, subtaskIndex, opID)));
     }
 
-    private synchronized void producedRemote(BagID bagID, BagID[] inpIDs, int numElements, int para, int subtaskIndex, int opID) {
+    private synchronized void producedRemote(BagID bagID, BagID[] inpIDs, int numElements, short para, short subtaskIndex, int opID) {
 		if (logCoord) LOG.info("producedRemote(bagID = " + bagID + ", numElements = " + numElements + ", opID = " + opID + ")");
 
 		// Get or init BagStatus
@@ -663,7 +663,7 @@ public class CFLManager {
 		});
     }
 
-    private void checkForClosingProduced(BagID bagID, BagStatus s, int para, int opID) {
+    private void checkForClosingProduced(BagID bagID, BagStatus s, short para, int opID) {
 		if (s.produceClosed) {
 			return; // Mondjuk ezt nem ertem, hogy hogy fordulhat elo
 		}
@@ -697,7 +697,7 @@ public class CFLManager {
 						// enelkul olyankor lenne gond, ha egy binaris operator egyik inputja ures, emiatt a closeInputBag
 						// mindegyik instance-t megloki, viszont a checkForClosingProduced csak a masik input alapjan nezi,
 						// hogy honnan kell jonni, es ezert nem szamit bizonyos jovesekre
-						for (int i=0; i< para; i++) {
+						for (int i = 0; i < para; i++) {
 							needProduced.set(i);
 						}
 					}
@@ -839,7 +839,7 @@ public class CFLManager {
 
     public static class Msg {
 
-		public int jobCounter;
+		public short jobCounter;
 
 		// These are nullable, and exactly one should be non-null
 		public CFLElement cflElement;
@@ -871,42 +871,42 @@ public class CFLManager {
 
 		public Msg() {}
 
-		public Msg(int jobCounter, CFLElement cflElement) {
+		public Msg(short jobCounter, CFLElement cflElement) {
 			this.jobCounter = jobCounter;
 			this.cflElement = cflElement;
 		}
 
-		public Msg(int jobCounter, Consumed consumed) {
+		public Msg(short jobCounter, Consumed consumed) {
 			this.jobCounter = jobCounter;
 			this.consumed = consumed;
 		}
 
-		public Msg(int jobCounter, Produced produced) {
+		public Msg(short jobCounter, Produced produced) {
 			this.jobCounter = jobCounter;
 			this.produced = produced;
 		}
 
-		public Msg(int jobCounter, CloseInputBag closeInputBag) {
+		public Msg(short jobCounter, CloseInputBag closeInputBag) {
 			this.jobCounter = jobCounter;
 			this.closeInputBag = closeInputBag;
 		}
 
-		public Msg(int jobCounter, SubscribeCnt subscribeCnt) {
+		public Msg(short jobCounter, SubscribeCnt subscribeCnt) {
 			this.jobCounter = jobCounter;
 			this.subscribeCnt = subscribeCnt;
 		}
 
-		public Msg(int jobCounter, BarrierAllReached barrierAllReached) {
+		public Msg(short jobCounter, BarrierAllReached barrierAllReached) {
 			this.jobCounter = jobCounter;
 			this.barrierAllReached = barrierAllReached;
 		}
 
-		public Msg(int jobCounter, VoteStop voteStop) {
+		public Msg(short jobCounter, VoteStop voteStop) {
 			this.jobCounter = jobCounter;
 			this.voteStop = voteStop;
 		}
 
-		public Msg(int jobCounter, Stop stop) {
+		public Msg(short jobCounter, Stop stop) {
 			this.jobCounter = jobCounter;
 			this.stop = stop;
 		}
@@ -933,12 +933,12 @@ public class CFLManager {
 
 		public BagID bagID;
 		public int numElements;
-		public int subtaskIndex;
+		public short subtaskIndex;
 		public int opID;
 
 		public Consumed() {}
 
-		public Consumed(BagID bagID, int numElements, int subtaskIndex, int opID) {
+		public Consumed(BagID bagID, int numElements, short subtaskIndex, int opID) {
 			this.bagID = bagID;
 			this.numElements = numElements;
 			this.subtaskIndex = subtaskIndex;
@@ -961,13 +961,13 @@ public class CFLManager {
 		public BagID bagID;
 		public BagID[] inpIDs;
 		public int numElements;
-		public int para;
-		public int subtaskIndex;
+		public short para;
+		public short subtaskIndex;
 		public int opID;
 
 		public Produced() {}
 
-		public Produced(BagID bagID, BagID[] inpIDs, int numElements, int para, int subtaskIndex, int opID) {
+		public Produced(BagID bagID, BagID[] inpIDs, int numElements, short para, short subtaskIndex, int opID) {
 			this.bagID = bagID;
 			this.inpIDs = inpIDs;
 			this.numElements = numElements;
