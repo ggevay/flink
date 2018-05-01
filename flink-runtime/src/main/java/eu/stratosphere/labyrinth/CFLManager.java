@@ -492,8 +492,9 @@ public class CFLManager {
 
 		public final BitSet producedSubtasks = new BitSet(200);
 
-		public Set<BagID> inputs = new HashSet<>();
-		public Set<BagID> inputTo = new HashSet<>();
+		public final HashSet<BagID> inputs = new HashSet<>();
+		public final HashSet<BagID> inputTo = new HashSet<>();
+		public final ArrayList<BagID> inputToList = new ArrayList<>(16);
 		public final BitSet consumedBy = new BitSet();
 
 		public int para = -2;
@@ -583,7 +584,7 @@ public class CFLManager {
 
 		checkForClosingConsumed(bagID, s, c, opID);
 
-		for (BagID b: bagStatuses.get(bagID).inputTo) {
+		for (BagID b: s.inputToList) {
 			// Regen azert volt jo itt a -1, mert ilyenkor biztosan nem source. De mostmar nem csak source-nal hasznaljuk a para-t
 			assert s.para != -2;
 			checkForClosingProduced(b, bagStatuses.get(b), s.para, b.opID);
@@ -631,7 +632,9 @@ public class CFLManager {
 				inpS = new BagStatus();
 				bagStatuses.put(inp, inpS);
 			}
-			inpS.inputTo.add(bagID);
+			if (inpS.inputTo.add(bagID)) {
+				inpS.inputToList.add(bagID);
+			}
 		}
 		assert s.inputs.size() <= 2;
 
