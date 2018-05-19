@@ -51,10 +51,19 @@ public class RetrogradeWithoutGellyUnioned implements Serializable {
 
 		DataSet<Tuple2<GameState, Short>> inDegrees = vertices
 			.flatMap(new FlatMapFunction<Tuple2<GameState,ValueCount>, Tuple2<GameState, Short>>() {
+
+				Tuple2<GameState, Short> reuse = Tuple2.of(new GameState(), (short)0);
+
 				@Override
 				public void flatMap(Tuple2<GameState, ValueCount> v, Collector<Tuple2<GameState, Short>> out) throws Exception {
 					for(GameState target: RetrogradeCommon.generateEdges(v.f0, movegen)) {
-						out.collect(Tuple2.of(target, (short) 1));
+						if (!Solver.REUSE) {
+							out.collect(Tuple2.of(target, (short) 1));
+						} else {
+							reuse.f0 = target;
+							reuse.f1 = (short) 1;
+							out.collect(reuse);
+						}
 					}
 				}
 			}).name("edge-targets")
@@ -63,6 +72,10 @@ public class RetrogradeWithoutGellyUnioned implements Serializable {
 
 
 		return vertices.leftOuterJoin(inDegrees).where(0).equalTo(0).with(new JoinFunction<Tuple2<GameState, ValueCount>, Tuple2<GameState, Short>, Tuple2<GameState, ValueCount>>() {
+
+			Tuple2<GameState, ValueCount> reuseLoss = Tuple2.of(new GameState(), ValueCount.value(Value.loss(0)));
+			Tuple2<GameState, ValueCount> reuseCount = Tuple2.of(new GameState(), ValueCount.count(0));
+
 			@Override
 			public Tuple2<GameState, ValueCount> join(Tuple2<GameState, ValueCount> vertex, Tuple2<GameState, Short> deg0) throws Exception {
 				short deg;
@@ -77,9 +90,21 @@ public class RetrogradeWithoutGellyUnioned implements Serializable {
 				if (value.isNull()) {
 					// vertex in main sector
 					if (deg == 0) { // state is blocked
-						return Tuple2.of(state, ValueCount.value(Value.loss(0)));
+						if (!Solver.REUSE) {
+							return Tuple2.of(state, ValueCount.value(Value.loss(0)));
+						} else {
+							reuseLoss.f0 = state;
+							//reuseLoff.f1 // nothing to do
+							return reuseLoss;
+						}
 					} else { // to be computed by the iteration (set to count for now)
-						return Tuple2.of(state, ValueCount.count(deg));
+						if (!Solver.REUSE) {
+							return Tuple2.of(state, ValueCount.count(deg));
+						} else {
+							reuseCount.f0 = state;
+							reuseCount.f1.count = deg;
+							return reuseCount;
+						}
 					}
 				} else {
 					return vertex;

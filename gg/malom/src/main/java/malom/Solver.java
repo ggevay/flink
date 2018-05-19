@@ -8,6 +8,8 @@ import org.apache.flink.api.java.typeutils.PojoTypeInfo;
 
 public class Solver {
 
+	static final boolean REUSE = false; // influences both the config opt and when emitting from UDFs
+
 	public static void main(String[] args) throws Exception {
 
 		System.out.println("VIGYAZAT! adjmasks atirva!");
@@ -22,8 +24,11 @@ public class Solver {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 		//env.setParallelism(1);
 
-		// gives only about 3-5% performance here, probably because I'm creating many objects in the UDFs anyway
-		//env.getConfig().enableObjectReuse();
+		if (REUSE) {
+			env.getConfig().enableObjectReuse();
+		} else {
+			env.getConfig().disableObjectReuse();
+		}
 
 		PojoTypeInfo.registerCustomSerializer(GameState.class, GameState.GameStateSerializer.class);
 		PojoTypeInfo.registerCustomSerializer(ValueCount.class, ValueCount.ValueCountSerializer.class);
