@@ -4,7 +4,7 @@ import org.apache.flink.api.common.operators.base.ReduceOperatorBase.CombineHint
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.typeutils.PojoTypeInfo;
 
-//-Xmx8g -Xms8g
+//-Xmx4g -Xms4g
 
 public class Solver {
 
@@ -21,7 +21,9 @@ public class Solver {
 
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 		//env.setParallelism(1);
-		//env.getConfig().enableObjectReuse(); // seems to have only negligible impact
+
+		// gives only about 3-5% performance here, probably because I'm creating many objects in the UDFs anyway
+		//env.getConfig().enableObjectReuse();
 
 		PojoTypeInfo.registerCustomSerializer(GameState.class, GameState.GameStateSerializer.class);
 		PojoTypeInfo.registerCustomSerializer(ValueCount.class, ValueCount.ValueCountSerializer.class);
@@ -31,7 +33,8 @@ public class Solver {
 
 
 
-		//Retrograde retrograde = new Retrograde(env);
+//		Retrograde retrograde = new Retrograde(env);
+//		retrograde.solve(rootSector);
 
 //		RetrogradeWithoutGelly retrograde = new RetrogradeWithoutGelly();
 //		retrograde.solve(rootSector, env);
