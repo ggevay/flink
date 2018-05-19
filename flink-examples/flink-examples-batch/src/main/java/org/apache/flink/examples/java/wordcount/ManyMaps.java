@@ -37,13 +37,16 @@ public class ManyMaps {
 
 	public static void main(String[] args) throws Exception {
 
-		for (int i=0; i<n; i++) {
-			run(i);
-		}
+//		for (int i=0; i<n; i++) {
+//			run(i);
+//		}
+//
+//		for (int i=0; i<n; i++) {
+//			System.out.println(times[i]);
+//		}
 
-		for (int i=0; i<n; i++) {
-			System.out.println(times[i]);
-		}
+
+		run(0);
 	}
 
 
@@ -53,11 +56,13 @@ public class ManyMaps {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(1);
 
-		DataSet<Long> xs = env.generateSequence(1, 100*1000*1000);
+		//env.getConfig().enableObjectReuse();
+
+		DataSet<Long> xs = env.generateSequence(1, 200*1000*1000);
 
 		xs.map(new org.apache.flink.runtime.operators.Map1()).output(new DiscardingOutputFormat<>());
-		xs.map(new org.apache.flink.runtime.operators.Map2()).output(new DiscardingOutputFormat<>());
-		xs.map(new org.apache.flink.runtime.operators.Map3()).output(new DiscardingOutputFormat<>());
+		//xs.map(new org.apache.flink.runtime.operators.Map2()).output(new DiscardingOutputFormat<>());
+		//xs.map(new org.apache.flink.runtime.operators.Map3()).output(new DiscardingOutputFormat<>());
 
 
 		long start = System.nanoTime();
