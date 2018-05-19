@@ -240,7 +240,8 @@ public class TaskManagerServicesConfiguration {
 			memType = MemoryType.HEAP;
 		}
 
-		boolean preAllocateMemory = configuration.getBoolean(TaskManagerOptions.MANAGED_MEMORY_PRE_ALLOCATE);
+		//boolean preAllocateMemory = configuration.getBoolean(TaskManagerOptions.MANAGED_MEMORY_PRE_ALLOCATE);
+		boolean preAllocateMemory = true;
 
 		float memoryFraction = configuration.getFloat(TaskManagerOptions.MANAGED_MEMORY_FRACTION);
 		checkConfigParameter(memoryFraction > 0.0f && memoryFraction < 1.0f, memoryFraction,
