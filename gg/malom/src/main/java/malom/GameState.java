@@ -4,7 +4,9 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoSerializable;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -207,6 +209,16 @@ public class GameState implements Comparable<GameState>, Serializable, KryoSeria
 		@Override
 		public boolean canEqual(Object obj) {
 			return obj instanceof GameStateSerializer;
+		}
+
+		@Override
+		public CompatibilityResult<GameState> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
+			throw new RuntimeException();
+		}
+
+		@Override
+		public TypeSerializerConfigSnapshot snapshotConfiguration() {
+			throw new RuntimeException();
 		}
 	}
 

@@ -1,6 +1,8 @@
 package malom;
 
+import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -169,6 +171,17 @@ public class ValueCount implements Serializable {
 		@Override
 		public boolean canEqual(Object obj) {
 			return obj instanceof ValueCountSerializer;
+		}
+
+
+		@Override
+		public TypeSerializerConfigSnapshot snapshotConfiguration() {
+			throw new RuntimeException();
+		}
+
+		@Override
+		public CompatibilityResult<ValueCount> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
+			throw new RuntimeException();
 		}
 	}
 }

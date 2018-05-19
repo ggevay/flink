@@ -1,6 +1,8 @@
 package malom;
 
+import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -142,6 +144,16 @@ public class Value implements Serializable {
 		@Override
 		public int hashCode() {
 			return getClass().hashCode();
+		}
+
+		@Override
+		public TypeSerializerConfigSnapshot snapshotConfiguration() {
+			throw new RuntimeException();
+		}
+
+		@Override
+		public CompatibilityResult<Value> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
+			throw new RuntimeException();
 		}
 	}
 }
