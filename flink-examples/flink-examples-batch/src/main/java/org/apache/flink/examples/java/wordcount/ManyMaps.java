@@ -41,6 +41,8 @@ public class ManyMaps {
 //			run(i);
 //		}
 //
+//		System.out.println("Times:");
+//
 //		for (int i=0; i<n; i++) {
 //			System.out.println(times[i]);
 //		}
@@ -56,7 +58,7 @@ public class ManyMaps {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(1);
 
-		//env.getConfig().enableObjectReuse();
+		//env.getConfig().enableObjectReuse(); // this doesn't really work here, as we have Longs, and the LongSerializers object reuse doesn't work
 
 		DataSet<Long> xs = env.generateSequence(1, 200*1000*1000);
 
@@ -69,7 +71,7 @@ public class ManyMaps {
 		env.execute();
 		long end = System.nanoTime();
 		long elapsed = end - start;
-		//System.out.println(elapsed);
+		System.out.println(elapsed);
 		times[i] = elapsed;
 	}
 
