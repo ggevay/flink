@@ -31,24 +31,24 @@ import org.apache.flink.util.Collector;
 @SuppressWarnings("serial")
 public class ManyMaps {
 
-	private static int n = 1;
+	private static int n = 10;
 
 	private static long[] times = new long[n];
 
 	public static void main(String[] args) throws Exception {
 
-//		for (int i=0; i<n; i++) {
-//			run(i);
-//		}
-//
-//		System.out.println("Times:");
-//
-//		for (int i=0; i<n; i++) {
-//			System.out.println(times[i]);
-//		}
+		for (int i=0; i<n; i++) {
+			run(i);
+		}
+
+		System.out.println("Times:");
+
+		for (int i=0; i<n; i++) {
+			System.out.println(times[i]);
+		}
 
 
-		run(0);
+//		run(0);
 	}
 
 
