@@ -128,27 +128,33 @@ public class RecordWriter<T extends IOReadableWritable> {
 
 		SerializationResult result = serializer.addRecord(record);
 
-		while (result.isFullBuffer()) {
-			if (tryFinishCurrentBufferBuilder(targetChannel, serializer)) {
-				// If this was a full record, we are done. Not breaking
-				// out of the loop at this point will lead to another
-				// buffer request before breaking out (that would not be
-				// a problem per se, but it can lead to stalls in the
-				// pipeline).
-				if (result.isFullRecord()) {
-					break;
-				}
-			}
-			BufferBuilder bufferBuilder = requestNewBufferBuilder(targetChannel);
-
-			result = serializer.continueWritingWithNextBufferBuilder(bufferBuilder);
-		}
+		if (result.isFullBuffer()) {
+            sendToTargetFullBuffer(result, targetChannel, serializer);
+        }
 		checkState(!serializer.hasSerializedData(), "All data should be written at once");
 
 		if (flushAlways) {
 			targetPartition.flush(targetChannel);
 		}
 	}
+
+	private void sendToTargetFullBuffer(SerializationResult result, int targetChannel, RecordSerializer<T> serializer) throws IOException, InterruptedException {
+        do {
+            if (tryFinishCurrentBufferBuilder(targetChannel, serializer)) {
+                // If this was a full record, we are done. Not breaking
+                // out of the loop at this point will lead to another
+                // buffer request before breaking out (that would not be
+                // a problem per se, but it can lead to stalls in the
+                // pipeline).
+                if (result.isFullRecord()) {
+                    break;
+                }
+            }
+            BufferBuilder bufferBuilder = requestNewBufferBuilder(targetChannel);
+
+            result = serializer.continueWritingWithNextBufferBuilder(bufferBuilder);
+        } while (result.isFullBuffer());
+    }
 
 	public void broadcastEvent(AbstractEvent event) throws IOException {
 		try (BufferConsumer eventBufferConsumer = EventSerializer.toBufferConsumer(event)) {
