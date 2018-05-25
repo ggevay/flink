@@ -148,22 +148,25 @@ public class RecordWriter<T extends IOReadableWritable> {
 		boolean pruneTriggered = false;
 		BufferBuilder bufferBuilder = getBufferBuilder(targetChannel);
 		SerializationResult result = serializer.copyToBufferBuilder(bufferBuilder);
-		while (result.isFullBuffer()) {
-			numBytesOut.inc(bufferBuilder.finish());
-			numBuffersOut.inc();
-
-			// If this was a full record, we are done. Not breaking out of the loop at this point
-			// will lead to another buffer request before breaking out (that would not be a
-			// problem per se, but it can lead to stalls in the pipeline).
-			if (result.isFullRecord()) {
-				pruneTriggered = true;
-				bufferBuilders[targetChannel] = Optional.empty();
-				break;
-			}
-
-			bufferBuilder = requestNewBufferBuilder(targetChannel);
-			result = serializer.copyToBufferBuilder(bufferBuilder);
-		}
+//		while (result.isFullBuffer()) {
+//			numBytesOut.inc(bufferBuilder.finish());
+//			numBuffersOut.inc();
+//
+//			// If this was a full record, we are done. Not breaking out of the loop at this point
+//			// will lead to another buffer request before breaking out (that would not be a
+//			// problem per se, but it can lead to stalls in the pipeline).
+//			if (result.isFullRecord()) {
+//				pruneTriggered = true;
+//				bufferBuilders[targetChannel] = Optional.empty();
+//				break;
+//			}
+//
+//			bufferBuilder = requestNewBufferBuilder(targetChannel);
+//			result = serializer.copyToBufferBuilder(bufferBuilder);
+//		}
+		if (result.isFullBuffer()) {
+			pruneTriggered = sendToTargetFullBuffer(result, targetChannel, serializer, bufferBuilder);
+        }
 		checkState(!serializer.hasSerializedData(), "All data should be written at once");
 
 		if (flushAlways) {
@@ -171,6 +174,42 @@ public class RecordWriter<T extends IOReadableWritable> {
 		}
 		return pruneTriggered;
 	}
+
+	private boolean sendToTargetFullBuffer(SerializationResult result, int targetChannel, RecordSerializer<T> serializer, BufferBuilder bufferBuilder) throws IOException, InterruptedException {
+        do {
+//            if (tryFinishCurrentBufferBuilder(targetChannel, serializer)) {
+//                // If this was a full record, we are done. Not breaking
+//                // out of the loop at this point will lead to another
+//                // buffer request before breaking out (that would not be
+//                // a problem per se, but it can lead to stalls in the
+//                // pipeline).
+//                if (result.isFullRecord()) {
+//                    break;
+//                }
+//            }
+//            BufferBuilder bufferBuilder = requestNewBufferBuilder(targetChannel);
+//
+//            result = serializer.continueWritingWithNextBufferBuilder(bufferBuilder);
+
+			numBytesOut.inc(bufferBuilder.finish());
+			numBuffersOut.inc();
+
+			// If this was a full record, we are done. Not breaking out of the loop at this point
+			// will lead to another buffer request before breaking out (that would not be a
+			// problem per se, but it can lead to stalls in the pipeline).
+			if (result.isFullRecord()) {
+				//pruneTriggered = true;
+				bufferBuilders[targetChannel] = Optional.empty();
+				//break;
+				return true;
+			}
+
+			bufferBuilder = requestNewBufferBuilder(targetChannel);
+			result = serializer.copyToBufferBuilder(bufferBuilder);
+        } while (result.isFullBuffer());
+
+        return false;
+    }
 
 	public void broadcastEvent(AbstractEvent event) throws IOException {
 		try (BufferConsumer eventBufferConsumer = EventSerializer.toBufferConsumer(event)) {
