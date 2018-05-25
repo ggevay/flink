@@ -58,7 +58,7 @@ public class ManyMaps {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(1);
 
-		//env.getConfig().enableObjectReuse(); // this doesn't really work here, as we have Longs, and the LongSerializers object reuse doesn't work
+		//env.getConfig().enableObjectReuse();
 
 		DataSet<Long> xs = env.generateSequence(1, 200*1000*1000);
 
