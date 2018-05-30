@@ -386,9 +386,30 @@ private[flink] trait TypeInformationGen[C <: Context] {
 
   def mkGenericTypeInfo[T: c.WeakTypeTag](desc: UDTDescriptor): c.Expr[TypeInformation[T]] = {
     val tpeClazz = c.Expr[Class[T]](Literal(Constant(desc.tpe)))
-    reify {
+    println("tpe: " + desc.tpe)
+    println("aaa: " + tpeClazz)
+    val ret = reify {
       TypeExtractor.createTypeInfo(tpeClazz.splice).asInstanceOf[TypeInformation[T]]
     }
+    println("bbb: " + ret)
+    ret
+
+//    import c.universe._
+//    //import u._
+//    import definitions._
+//    import internal._
+//    import reificationSupport._
+//
+//    import c.universe.Quasiquote
+//
+//    println("tpe: " + desc.tpe)
+//    //val tt = c.Expr(mkTypeTree(desc.tpe))
+//    val tt = mkTypeTree(desc.tpe)
+//    println("tt: " + tt)
+//
+//    val ret = c.Expr[TypeInformation[T]](q"TypeInformation.of(new TypeHint[$tt](){})")
+//    println(ret)
+//    ret
   }
 
   def mkTypeParameter[T: c.WeakTypeTag](
