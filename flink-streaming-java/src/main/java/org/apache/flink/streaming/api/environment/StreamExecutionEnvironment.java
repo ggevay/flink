@@ -733,10 +733,6 @@ public abstract class StreamExecutionEnvironment {
 	 */
 	@SafeVarargs
 	public final <OUT> DataStreamSource<OUT> fromElements(Class<OUT> type, OUT... data) {
-		if (data.length == 0) {
-			throw new IllegalArgumentException("fromElements needs at least one element as argument");
-		}
-
 		TypeInformation<OUT> typeInfo;
 		try {
 			typeInfo = TypeExtractor.getForClass(type);
