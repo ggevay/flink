@@ -187,6 +187,7 @@ class TaskManager(
 
   //ggg
   private var allHosts: Array[String] = _
+  private var cflManager: CFLManager = _
 
   // --------------------------------------------------------------------------
   //  Actor messages and life cycle
@@ -226,24 +227,24 @@ class TaskManager(
       allHosts = scala.io.Source.fromFile(confDir + "/slaves").getLines().toArray
       assert(!allHosts.contains(""))
       //val hostsExceptMe = allHosts.filter(s => s != hostName)
-      CFLManager.create(this, allHosts, allHosts.head == hostName)
+      cflManager = new CFLManager(this, allHosts, allHosts.head == hostName)
 
       if (!allHosts.contains(hostName)) {
         throw new RuntimeException(
           "A slaves fajlban a 'hostname' altal visszaadott neveknek kell lenniuk")
       }
-      CFLManager.tmId = allHosts.indexOf(hostName).asInstanceOf[Byte]
-      CFLManager.numAllSlots = allHosts.length * numberOfSlots
-      CFLManager.numTaskSlotsPerTm = numberOfSlots
+      cflManager.tmId = allHosts.indexOf(hostName).asInstanceOf[Byte]
+      cflManager.numAllSlots = allHosts.length * numberOfSlots
+      cflManager.numTaskSlotsPerTm = numberOfSlots
     } else {
       //local execution
 
       allHosts = Array("localhost")
 
-      CFLManager.create(this, allHosts, true)
-      CFLManager.tmId = 0
-      CFLManager.numAllSlots = numberOfSlots
-      CFLManager.numTaskSlotsPerTm = numberOfSlots
+      cflManager = new CFLManager(this, allHosts, true)
+      cflManager.tmId = 0
+      cflManager.numAllSlots = numberOfSlots
+      cflManager.numTaskSlotsPerTm = numberOfSlots
 
       //tmp teszt:
       //CFLManager.create(Array[String]("localhost"))
@@ -253,7 +254,7 @@ class TaskManager(
 
   def CFLVoteStop(): Unit = {
     currentJobManager foreach {
-      _ ! decorateMessage(VoteStop(CFLManager.getSing.getJobID, allHosts.length))
+      _ ! decorateMessage(VoteStop(cflManager.getJobID, allHosts.length))
     }
   }
 
@@ -264,6 +265,8 @@ class TaskManager(
    */
   override def postStop(): Unit = {
     log.info(s"Stopping TaskManager ${self.path.toSerializationFormat}.")
+
+    cflManager.stop()
 
     cancelAndClearEverything(new Exception("TaskManager is shutting down."))
 
@@ -1230,9 +1233,8 @@ class TaskManager(
       }
 
       if (!config.cflManDeactivated) {
-        val cflMan = CFLManager.getSing
-        assert(cflMan != null) // mert mar a TM indulasakor letrehoztuk
-        cflMan.setJobID(jobInformation.getJobId)
+        assert(cflManager != null) // mert mar a TM indulasakor letrehoztuk
+        cflManager.setJobID(jobInformation.getJobId)
       } else {
         log.info("cflManDeactivated!")
       }
