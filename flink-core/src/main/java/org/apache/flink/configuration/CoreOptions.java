@@ -315,6 +315,6 @@ public class CoreOptions {
 	 * and {@link CoreOptions#LEGACY_MODE}.
 	 */
 	public static final ConfigOption<String> MODE = key("mode")
-		.defaultValue(NEW_MODE)
+		.defaultValue(LEGACY_MODE)
 		.withDescription("Switch to select the execution mode. Possible values are 'new' and 'legacy'.");
 }
