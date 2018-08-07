@@ -271,7 +271,8 @@ public class TaskAsyncCallTest extends TestLogger {
 			taskMetricGroup,
 			consumableNotifier,
 			partitionProducerStateChecker,
-			executor);
+			executor,
+			null);
 	}
 
 	public static class CheckpointsInOrderInvokable extends AbstractInvokable {

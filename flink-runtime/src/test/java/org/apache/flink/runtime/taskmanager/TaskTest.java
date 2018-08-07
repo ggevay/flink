@@ -1038,7 +1038,8 @@ public class TaskTest extends TestLogger {
 			taskMetricGroup,
 			consumableNotifier,
 			partitionProducerStateChecker,
-			executor);
+			executor,
+			null);
 	}
 
 	// ------------------------------------------------------------------------

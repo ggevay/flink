@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.taskmanager;
 
+import eu.stratosphere.labyrinth.CFLManager;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.TaskInfo;
@@ -86,6 +87,8 @@ public class RuntimeEnvironment implements Environment {
 
 	private final Task containingTask;
 
+	private final CFLManager cflManager;
+
 	// ------------------------------------------------------------------------
 
 	public RuntimeEnvironment(
@@ -111,6 +114,7 @@ public class RuntimeEnvironment implements Environment {
 			CheckpointResponder checkpointResponder,
 			TaskManagerRuntimeInfo taskManagerInfo,
 			TaskMetricGroup metrics,
+			CFLManager cflManager,
 			Task containingTask) {
 
 		this.jobId = checkNotNull(jobId);
@@ -136,6 +140,7 @@ public class RuntimeEnvironment implements Environment {
 		this.taskManagerInfo = checkNotNull(taskManagerInfo);
 		this.containingTask = containingTask;
 		this.metrics = metrics;
+		this.cflManager = cflManager;
 	}
 
 	// ------------------------------------------------------------------------
@@ -253,6 +258,11 @@ public class RuntimeEnvironment implements Environment {
 	@Override
 	public TaskEventDispatcher getTaskEventDispatcher() {
 		return taskEventDispatcher;
+	}
+
+	@Override
+	public CFLManager getCFLManager() {
+		return cflManager;
 	}
 
 	@Override

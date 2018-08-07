@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.execution;
 
+import eu.stratosphere.labyrinth.CFLManager;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.TaskInfo;
@@ -160,6 +161,8 @@ public interface Environment {
 	 * @return KvState registry
 	 */
 	TaskKvStateRegistry getTaskKvStateRegistry();
+
+	CFLManager getCFLManager();
 
 	/**
 	 * Confirms that the invokable has successfully completed all steps it needed to

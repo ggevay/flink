@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.taskmanager;
 
+import eu.stratosphere.labyrinth.CFLManager;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
@@ -270,6 +271,8 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 	 */
 	private ClassLoader userCodeClassLoader;
 
+	private final CFLManager cflManager;
+
 	/**
 	 * <p><b>IMPORTANT:</b> This constructor may not start any work that would need to
 	 * be undone in the case of a failing task deployment.</p>
@@ -299,7 +302,8 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 		@Nonnull TaskMetricGroup metricGroup,
 		ResultPartitionConsumableNotifier resultPartitionConsumableNotifier,
 		PartitionProducerStateChecker partitionProducerStateChecker,
-		Executor executor) {
+		Executor executor,
+		CFLManager cflManager) {
 
 		Preconditions.checkNotNull(jobInformation);
 		Preconditions.checkNotNull(taskInformation);
@@ -353,6 +357,8 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 
 		this.partitionProducerStateChecker = Preconditions.checkNotNull(partitionProducerStateChecker);
 		this.executor = Preconditions.checkNotNull(executor);
+
+		this.cflManager = cflManager;
 
 		// create the reader and writer structures
 
@@ -682,6 +688,7 @@ public class Task implements Runnable, TaskActions, CheckpointListener {
 				checkpointResponder,
 				taskManagerConfig,
 				metrics,
+				cflManager,
 				this);
 
 			// now load and instantiate the task's invokable code

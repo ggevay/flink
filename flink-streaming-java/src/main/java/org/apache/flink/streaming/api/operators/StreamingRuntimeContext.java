@@ -18,6 +18,7 @@
 
 package org.apache.flink.streaming.api.operators;
 
+import eu.stratosphere.labyrinth.CFLManager;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.functions.BroadcastVariableInitializer;
@@ -91,6 +92,10 @@ public class StreamingRuntimeContext extends AbstractRuntimeUDFContext {
 
 	public ProcessingTimeService getProcessingTimeService() {
 		return operator.getProcessingTimeService();
+	}
+
+	public CFLManager getCFLManager() {
+		return taskEnvironment.getCFLManager();
 	}
 
 	/**

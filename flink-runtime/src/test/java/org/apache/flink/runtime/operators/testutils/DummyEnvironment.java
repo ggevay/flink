@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.operators.testutils;
 
+import eu.stratosphere.labyrinth.CFLManager;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.TaskInfo;
@@ -179,6 +180,11 @@ public class DummyEnvironment implements Environment {
 	@Override
 	public TaskKvStateRegistry getTaskKvStateRegistry() {
 		return kvStateRegistry.createTaskRegistry(jobId, jobVertexId);
+	}
+
+	@Override
+	public CFLManager getCFLManager() {
+		return null;
 	}
 
 	@Override
