@@ -76,6 +76,8 @@ public class CFLManager {
 		this.hosts = hosts;
 		this.coordinator = coordinator;
 
+		recvdSeqNums = new SeqNumAtomicBools(16384);
+
 		try {
 			UDPSocket = new MulticastSocket(UDPPort);
 			multicastGroup = InetAddress.getByName("229.8.9.10");
@@ -113,6 +115,7 @@ public class CFLManager {
 	private final InetAddress multicastGroup;
 	private final int UDPMaxPacketSize = 32;
 	private final UDPReceiver udpReceiver;
+	private final SeqNumAtomicBools recvdSeqNums;
 
 	private List<Integer> tentativeCFL = new ArrayList<>(); // ez lehet lyukas, ha nem sorrendben erkeznek meg az elemek
 	private List<Integer> curCFL = new ArrayList<>(); // ez sosem lyukas
@@ -237,13 +240,18 @@ public class CFLManager {
 					// Vigyazat, itt lenyeges, hogy a reuse minden fieldje null!
 					Msg msg = new Msg();
 					Msg.deserialize(msg, dids);
-					msg.assertOK(); //todo: kivenni
+					//msg.assertOK();
 
 					////if (logCoord) //todo: berakni az if-et
+					if (LOG.isInfoEnabled()) {
 						LOG.info("Received UDP msg " + msg + "; I am " + this.toString());
+					}
 
 					assert msg.cflElement != null;
-					addTentative(msg.cflElement.seqNum, msg.cflElement.bbId);
+
+					if (!recvdSeqNums.getAndSet(msg.cflElement.seqNum)) {
+						addTentative(msg.cflElement.seqNum, msg.cflElement.bbId);
+					}
 				}
 			} catch (Throwable t) {
 				t.printStackTrace();
@@ -330,7 +338,9 @@ public class CFLManager {
 							}
 
 							if (msg.cflElement != null) {
-								addTentative(msg.cflElement.seqNum, msg.cflElement.bbId); // will do the callbacks
+								if (!recvdSeqNums.getAndSet(msg.cflElement.seqNum)) {
+									addTentative(msg.cflElement.seqNum, msg.cflElement.bbId); // will do the callbacks
+								}
 							} else if (msg.consumed != null) {
 								assert coordinator;
 								consumedRemote(msg.consumed.bagID, msg.consumed.numElements, msg.consumed.subtaskIndex, msg.consumed.opID);
@@ -368,7 +378,9 @@ public class CFLManager {
 	}
 
 	private synchronized void addTentative(int seqNum, int bbId) {
-		LOG.info("addTentative(" + seqNum + ", " + bbId + ")"); //todo: kivenni
+		if (LOG.isInfoEnabled()) {
+			LOG.info("addTentative(" + seqNum + ", " + bbId + ")"); //todo: kivenni
+		}
 
 		while (seqNum >= tentativeCFL.size()) {
 			tentativeCFL.add(null);
@@ -506,6 +518,8 @@ public class CFLManager {
 		curCFL.clear();
 
 		cflSendSeqNum = 0;
+
+		recvdSeqNums.clear();
 
 		bagStatuses.clear();
 		bagConsumedStatuses.clear();

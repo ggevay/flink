@@ -19,33 +19,41 @@
 package eu.stratosphere.labyrinth;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-final class AutoGrowArrayList<T> {
+final class SeqNumAtomicBools {
 
-	private final ArrayList<T> a;
+	private final ArrayList<AtomicBoolean> as;
 
-	AutoGrowArrayList(int s) {
-		a = new ArrayList<>(s);
+	SeqNumAtomicBools(int s) {
+		as = new ArrayList<>(s);
+		for (int j = 0; j < s; j++) {
+			as.add(new AtomicBoolean(false));
+		}
 	}
 
-	T get(int i) {
+	boolean getAndSet(int i) {
 		ensureCapacity(i);
-		return a.get(i);
+		AtomicBoolean a = as.get(i);
+		return a.getAndSet(true);
 	}
 
-	void put(int i, T v) {
-		ensureCapacity(i);
-		a.set(i, v);
-	}
-
-	void clear() {
-		a.clear();
-	}
-
+	synchronized void clear() {
+	    for (AtomicBoolean a: as) {
+	        a.set(false);
+        }
+    }
 
 	private void ensureCapacity(int i) {
-		while (i >= a.size()) {
-			a.add(null);
+		if (i >= as.size()) {
+			synchronized (this) {
+				if (i >= as.size()) {
+					int toAdd = as.size(); // Double the size
+					for (int j = 0; j < toAdd; j++) {
+						as.add(new AtomicBoolean(false));
+					}
+				}
+			}
 		}
 	}
 }
