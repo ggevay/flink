@@ -217,39 +217,41 @@ class TaskManager(
     }
 
     //ggg
-    import sys.process._
-    import eu.stratosphere.labyrinth._
-    //val curDir = ("pwd"!!).stripSuffix("\n")
-    val hostName = ("hostname"!!).stripSuffix("\n")
+    if (!config.cflManDeactivated) {
+      import sys.process._
+      import eu.stratosphere.labyrinth._
+      //val curDir = ("pwd"!!).stripSuffix("\n")
+      val hostName = ("hostname"!!).stripSuffix("\n")
 
-    val confDir = System.getenv(ConfigConstants.ENV_FLINK_CONF_DIR)
-    if (confDir != null) {
-      allHosts = scala.io.Source.fromFile(confDir + "/slaves").getLines().toArray
-      assert(!allHosts.contains(""))
-      //val hostsExceptMe = allHosts.filter(s => s != hostName)
-      cflManager = new CFLManager(this, allHosts, allHosts.head == hostName)
+      val confDir = System.getenv(ConfigConstants.ENV_FLINK_CONF_DIR)
+      if (confDir != null) {
+        allHosts = scala.io.Source.fromFile(confDir + "/slaves").getLines().toArray
+        assert(!allHosts.contains(""))
+        //val hostsExceptMe = allHosts.filter(s => s != hostName)
+        cflManager = new CFLManager(this, allHosts, allHosts.head == hostName)
 
-      if (!allHosts.contains(hostName)) {
-        throw new RuntimeException(
-          "A slaves fajlban a 'hostname' altal visszaadott neveknek kell lenniuk")
+        if (!allHosts.contains(hostName)) {
+          throw new RuntimeException(
+            "A slaves fajlban a 'hostname' altal visszaadott neveknek kell lenniuk")
+        }
+        cflManager.tmId = allHosts.indexOf(hostName).asInstanceOf[Byte]
+        cflManager.numAllSlots = allHosts.length * numberOfSlots
+        cflManager.numTaskSlotsPerTm = numberOfSlots
+      } else {
+        //local execution
+
+        allHosts = Array("localhost")
+
+        cflManager = new CFLManager(this, allHosts, true)
+        cflManager.tmId = 0
+        cflManager.numAllSlots = numberOfSlots
+        cflManager.numTaskSlotsPerTm = numberOfSlots
+
+        //tmp teszt:
+        //CFLManager.create(Array[String]("localhost"))
       }
-      cflManager.tmId = allHosts.indexOf(hostName).asInstanceOf[Byte]
-      cflManager.numAllSlots = allHosts.length * numberOfSlots
-      cflManager.numTaskSlotsPerTm = numberOfSlots
-    } else {
-      //local execution
-
-      allHosts = Array("localhost")
-
-      cflManager = new CFLManager(this, allHosts, true)
-      cflManager.tmId = 0
-      cflManager.numAllSlots = numberOfSlots
-      cflManager.numTaskSlotsPerTm = numberOfSlots
-
-      //tmp teszt:
-      //CFLManager.create(Array[String]("localhost"))
+      //
     }
-    //
   }
 
   def CFLVoteStop(): Unit = {
@@ -266,7 +268,9 @@ class TaskManager(
   override def postStop(): Unit = {
     log.info(s"Stopping TaskManager ${self.path.toSerializationFormat}.")
 
-    cflManager.stop()
+    if (!config.cflManDeactivated) {
+      cflManager.stop()
+    }
 
     cancelAndClearEverything(new Exception("TaskManager is shutting down."))
 
