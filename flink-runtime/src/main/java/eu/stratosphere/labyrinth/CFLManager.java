@@ -65,7 +65,7 @@ public class CFLManager {
 	public static final boolean barrier = false; // barrier between iteration steps
 
 	private static final int port = 4444;
-	private static final int UDPPort = port + 1;
+	//private static final int UDPPort = port + 1;
 
 	public byte tmId = -1;
 	public int numAllSlots = -1;
@@ -76,17 +76,17 @@ public class CFLManager {
 		this.hosts = hosts;
 		this.coordinator = coordinator;
 
-		recvdSeqNums = new SeqNumAtomicBools(16384);
-
-		try {
-			UDPSocket = new MulticastSocket(UDPPort);
-			multicastGroup = InetAddress.getByName("229.8.9.10");
-			UDPSocket.joinGroup(multicastGroup);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-
-		udpReceiver = new UDPReceiver(); //thread
+//		recvdSeqNums = new SeqNumAtomicBools(16384);
+//
+//		try {
+//			UDPSocket = new MulticastSocket(UDPPort);
+//			multicastGroup = InetAddress.getByName("229.8.9.10");
+//			UDPSocket.joinGroup(multicastGroup);
+//		} catch (IOException e) {
+//			throw new RuntimeException(e);
+//		}
+//
+//		udpReceiver = new UDPReceiver(); //thread
 		new ConnAccepter(); //thread
 
 		senderStreams = new OutputStream[hosts.length];
@@ -111,11 +111,11 @@ public class CFLManager {
 	private volatile boolean allSenderUp = false;
 	private volatile boolean allIncomingUp = false;
 
-	private final MulticastSocket UDPSocket;
-	private final InetAddress multicastGroup;
-	private final int UDPMaxPacketSize = 32;
-	private final UDPReceiver udpReceiver;
-	private final SeqNumAtomicBools recvdSeqNums;
+//	private final MulticastSocket UDPSocket;
+//	private final InetAddress multicastGroup;
+//	private final int UDPMaxPacketSize = 32;
+//	private final UDPReceiver udpReceiver;
+//	private final SeqNumAtomicBools recvdSeqNums;
 
 	private List<Integer> tentativeCFL = new ArrayList<>(); // ez lehet lyukas, ha nem sorrendben erkeznek meg az elemek
 	private List<Integer> curCFL = new ArrayList<>(); // ez sosem lyukas
@@ -201,11 +201,11 @@ public class CFLManager {
 		try {
 			final Msg msg = new Msg(jobCounter, e);
 
-			// UDP:
-			final DataOutputSerializer dos = new DataOutputSerializer(UDPMaxPacketSize);
-			msg.serialize(dos);
-			assert dos.length() <= UDPMaxPacketSize; // DataOutputSerializer would allow more (with resizing), but we have a fixed buffer for recv
-			UDPSocket.send(new DatagramPacket(dos.getSharedBuffer(), dos.length(), multicastGroup, UDPPort));
+//			// UDP:
+//			final DataOutputSerializer dos = new DataOutputSerializer(UDPMaxPacketSize);
+//			msg.serialize(dos);
+//			assert dos.length() <= UDPMaxPacketSize; // DataOutputSerializer would allow more (with resizing), but we have a fixed buffer for recv
+//			UDPSocket.send(new DatagramPacket(dos.getSharedBuffer(), dos.length(), multicastGroup, UDPPort));
 
 			// TCP:
 			for (int i = 0; i < hosts.length; i++) {
@@ -217,58 +217,58 @@ public class CFLManager {
 		}
 	}
 
-	private class UDPReceiver implements Runnable {
-
-		private volatile boolean stopped = false;
-
-		UDPReceiver() {
-			Thread thread = new Thread(this, "UDPReceiver");
-			thread.setDaemon(true);
-			thread.start();
-		}
-
-		@Override
-		public void run() {
-			try {
-				byte[] buf = new byte[UDPMaxPacketSize];
-				while (!stopped) {
-					DatagramPacket packet = new DatagramPacket(buf, buf.length);
-					UDPSocket.receive(packet);
-					if (stopped) break;
-					DataInputDeserializer dids = new DataInputDeserializer(buf);
-
-					// Vigyazat, itt lenyeges, hogy a reuse minden fieldje null!
-					Msg msg = new Msg();
-					Msg.deserialize(msg, dids);
-					//msg.assertOK();
-
-					////if (logCoord) //todo: berakni az if-et
-					if (LOG.isInfoEnabled()) {
-						LOG.info("Received UDP msg " + msg + "; I am " + this.toString());
-					}
-
-					assert msg.cflElement != null;
-
-					if (!recvdSeqNums.getAndSet(msg.cflElement.seqNum)) {
-						addTentative(msg.cflElement.seqNum, msg.cflElement.bbId);
-					}
-				}
-			} catch (Throwable t) {
-				t.printStackTrace();
-				LOG.error(ExceptionUtils.stringifyException(t));
-				Runtime.getRuntime().halt(300);
-			}
-		}
-
-		public void stop() {
-			stopped = true;
-			try {
-				UDPSocket.leaveGroup(multicastGroup);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-		}
-	}
+//	private class UDPReceiver implements Runnable {
+//
+//		private volatile boolean stopped = false;
+//
+//		UDPReceiver() {
+//			Thread thread = new Thread(this, "UDPReceiver");
+//			thread.setDaemon(true);
+//			thread.start();
+//		}
+//
+//		@Override
+//		public void run() {
+//			try {
+//				byte[] buf = new byte[UDPMaxPacketSize];
+//				while (!stopped) {
+//					DatagramPacket packet = new DatagramPacket(buf, buf.length);
+//					UDPSocket.receive(packet);
+//					if (stopped) break;
+//					DataInputDeserializer dids = new DataInputDeserializer(buf);
+//
+//					// Vigyazat, itt lenyeges, hogy a reuse minden fieldje null!
+//					Msg msg = new Msg();
+//					Msg.deserialize(msg, dids);
+//					//msg.assertOK();
+//
+//					////if (logCoord) //todo: berakni az if-et
+//					if (LOG.isInfoEnabled()) {
+//						LOG.info("Received UDP msg " + msg + "; I am " + this.toString());
+//					}
+//
+//					assert msg.cflElement != null;
+//
+//					if (!recvdSeqNums.getAndSet(msg.cflElement.seqNum)) {
+//						addTentative(msg.cflElement.seqNum, msg.cflElement.bbId);
+//					}
+//				}
+//			} catch (Throwable t) {
+//				t.printStackTrace();
+//				LOG.error(ExceptionUtils.stringifyException(t));
+//				Runtime.getRuntime().halt(300);
+//			}
+//		}
+//
+//		public void stop() {
+//			stopped = true;
+//			try {
+//				UDPSocket.leaveGroup(multicastGroup);
+//			} catch (IOException e) {
+//				throw new RuntimeException(e);
+//			}
+//		}
+//	}
 
 	private class ConnAccepter implements Runnable {
 
@@ -338,9 +338,9 @@ public class CFLManager {
 							}
 
 							if (msg.cflElement != null) {
-								if (!recvdSeqNums.getAndSet(msg.cflElement.seqNum)) {
+								//if (!recvdSeqNums.getAndSet(msg.cflElement.seqNum)) {
 									addTentative(msg.cflElement.seqNum, msg.cflElement.bbId); // will do the callbacks
-								}
+								//}
 							} else if (msg.consumed != null) {
 								assert coordinator;
 								consumedRemote(msg.consumed.bagID, msg.consumed.numElements, msg.consumed.subtaskIndex, msg.consumed.opID);
@@ -519,7 +519,7 @@ public class CFLManager {
 
 		cflSendSeqNum = 0;
 
-		recvdSeqNums.clear();
+		//recvdSeqNums.clear();
 
 		bagStatuses.clear();
 		bagConsumedStatuses.clear();
@@ -545,7 +545,7 @@ public class CFLManager {
 	// is not called during a reset.
 	public void stop() {
 		LOG.info("Stopping CFLManager");
-		udpReceiver.stop();
+		//udpReceiver.stop();
 	}
 
 	public synchronized void specifyTerminalBB(int bbId) {
