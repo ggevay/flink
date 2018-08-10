@@ -242,8 +242,7 @@ public class CFLManager {
 //					Msg.deserialize(msg, dids);
 //					//msg.assertOK();
 //
-//					////if (logCoord) //todo: berakni az if-et
-//					if (LOG.isInfoEnabled()) {
+//					if (logCoord && LOG.isInfoEnabled()) {
 //						LOG.info("Received UDP msg " + msg + "; I am " + this.toString());
 //					}
 //
@@ -378,9 +377,9 @@ public class CFLManager {
 	}
 
 	private synchronized void addTentative(int seqNum, int bbId) {
-		if (LOG.isInfoEnabled()) {
-			LOG.info("addTentative(" + seqNum + ", " + bbId + ")"); //todo: kivenni
-		}
+//		if (LOG.isInfoEnabled()) {
+//			LOG.info("addTentative(" + seqNum + ", " + bbId + ")");
+//		}
 
 		while (seqNum >= tentativeCFL.size()) {
 			tentativeCFL.add(null);
