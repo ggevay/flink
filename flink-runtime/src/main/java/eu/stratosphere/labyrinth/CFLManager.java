@@ -50,6 +50,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntConsumer;
 
@@ -138,6 +143,8 @@ public class CFLManager {
 	private final Object msgSendLock = new Object();
 
 	private volatile short jobCounter = -10;
+
+	private final ExecutorService es = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
 	public JobID getJobID() {
 		return jobID;
@@ -422,9 +429,23 @@ public class CFLManager {
 			});
 		}
 
+		ArrayList<Future<?>> futures = new ArrayList<>(callbacks.size());
+		CountDownLatch latch = new CountDownLatch(callbacks.size());
 		for (CFLCallback cb: callbacks) {
-			cb.notify(curCFL);
+			futures.add(es.submit(new Runnable() {
+				@Override
+				public void run() {
+					cb.notify(curCFL);
+					latch.countDown();
+				}
+			}));
 		}
+		try {
+			latch.await();
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+		//awaitAll(futures);
 
 		assert callbacks.size() == 0 || terminalBB != -1; // A drivernek be kell allitania a job elindulasa elott. Viszont ebbe a fieldbe a BagOperatorHost.setup-ban kerul.
 		if (shouldNotifyTerminalBB()) {
@@ -478,11 +499,36 @@ public class CFLManager {
 			cb.notifyTerminalBB();
 		}
 
+//		ArrayList<Future<?>> futures = new ArrayList<>(callbacks.size());
+//		for(CloseInputBag cib: closeInputBags) {
+//			futures.add(es.submit(new Runnable() {
+//				@Override
+//				public void run() {
+//					cb.notifyCloseInput(cib.bagID, cib.opID);
+//				}
+//			}));
+//		}
+//		awaitAll(futures);
 		for(CloseInputBag cib: closeInputBags) {
-			cb.notifyCloseInput(cib.bagID, cib.opID);
+			Runnable r = cb.notifyCloseInput(cib.bagID, cib.opID);
+			if (r != null) {
+				r.run();
+			}
 		}
 
 		subscribeCntLocal();
+	}
+
+	private final void awaitAll(ArrayList<Future<?>> futures) {
+		for (Future<?> f: futures) {
+			try {
+				f.get();
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			} catch (ExecutionException e) {
+				throw new RuntimeException(e);
+			}
+		}
 	}
 
 	private void checkVoteStop() {
@@ -852,9 +898,28 @@ public class CFLManager {
 		closeInputBags.add(new CloseInputBag(bagID, opID));
 
 		ArrayList<CFLCallback> origCallbacks = new ArrayList<>(callbacks);
+
+		ArrayList<Future<?>> futures = new ArrayList<>(callbacks.size());
+		CountDownLatch latch = new CountDownLatch(origCallbacks.size());
 		for (CFLCallback cb: origCallbacks) {
-			cb.notifyCloseInput(bagID, opID);
+//			futures.add(es.submit(new Runnable() {
+//				@Override
+//				public void run() {
+//					cb.notifyCloseInput(bagID, opID);
+//				}
+//			}));
+			Runnable r = cb.notifyCloseInput(bagID, opID);
+			if (r != null) {
+				futures.add(es.submit(r));
+			}
+			latch.countDown();
 		}
+		try {
+			latch.await();
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+		//awaitAll(futures);
     }
 
 
