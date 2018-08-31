@@ -430,21 +430,23 @@ public class CFLManager {
 		}
 
 		ArrayList<Future<?>> futures = new ArrayList<>(callbacks.size());
-		CountDownLatch latch = new CountDownLatch(callbacks.size());
+		//CountDownLatch latch = new CountDownLatch(callbacks.size());
 		for (CFLCallback cb: callbacks) {
-			futures.add(es.submit(new Runnable() {
-				@Override
-				public void run() {
-					cb.notify(curCFL);
-					latch.countDown();
-				}
-			}));
+			synchronized (cb) {
+				futures.add(es.submit(new Runnable() {
+					@Override
+					public void run() {
+						cb.notify(curCFL);
+						//latch.countDown();
+					}
+				}));
+			}
 		}
-		try {
-			latch.await();
-		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
-		}
+//		try {
+//			latch.await();
+//		} catch (InterruptedException e) {
+//			throw new RuntimeException(e);
+//		}
 		//awaitAll(futures);
 
 		assert callbacks.size() == 0 || terminalBB != -1; // A drivernek be kell allitania a job elindulasa elott. Viszont ebbe a fieldbe a BagOperatorHost.setup-ban kerul.
@@ -900,7 +902,7 @@ public class CFLManager {
 		ArrayList<CFLCallback> origCallbacks = new ArrayList<>(callbacks);
 
 		ArrayList<Future<?>> futures = new ArrayList<>(callbacks.size());
-		CountDownLatch latch = new CountDownLatch(origCallbacks.size());
+		//CountDownLatch latch = new CountDownLatch(origCallbacks.size());
 		for (CFLCallback cb: origCallbacks) {
 //			futures.add(es.submit(new Runnable() {
 //				@Override
@@ -910,15 +912,17 @@ public class CFLManager {
 //			}));
 			Runnable r = cb.notifyCloseInput(bagID, opID);
 			if (r != null) {
-				futures.add(es.submit(r));
+				synchronized (cb) {
+					futures.add(es.submit(r));
+				}
 			}
-			latch.countDown();
+			//latch.countDown();
 		}
-		try {
-			latch.await();
-		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
-		}
+//		try {
+//			latch.await();
+//		} catch (InterruptedException e) {
+//			throw new RuntimeException(e);
+//		}
 		//awaitAll(futures);
     }
 
