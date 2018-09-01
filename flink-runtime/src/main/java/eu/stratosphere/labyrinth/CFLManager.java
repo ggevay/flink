@@ -55,7 +55,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.IntConsumer;
 
 /**
@@ -160,6 +163,8 @@ public class CFLManager {
 	}
 
 	private JobID jobID = null;
+
+	private final HashMap<CFLCallback, Semaphore> sems = new HashMap<>();
 
 	private void createSenderConnections() {
 		final int timeout = 500;
@@ -429,14 +434,20 @@ public class CFLManager {
 			});
 		}
 
+		List<Integer> curCFLToPass = new ArrayList<>(curCFL);
 		//CountDownLatch latch = new CountDownLatch(callbacks.size());
 		for (CFLCallback cb: callbacks) {
-			List<Integer> curCFLToPass = new ArrayList<>(curCFL);
+			Semaphore sem = sems.get(cb);
+			try {
+				sem.acquire(1);
+			} catch (InterruptedException e) {
+				throw new RuntimeException();
+			}
 			es.submit(new Runnable() {
 				@Override
 				public void run() {
 //					cb.notify(curCFL);
-					cb.notify(curCFLToPass);
+					cb.notify(curCFLToPass, sem);
 					//latch.countDown();
 				}
 			});
@@ -486,12 +497,13 @@ public class CFLManager {
 		// Maybe there could be a waitForReset here
 
 		callbacks.add(cb);
+		sems.put(cb, new Semaphore(1));
 
 		// Egyenkent elkuldjuk a notificationt mindegyik eddigirol
 		List<Integer> tmpCfl = new ArrayList<>();
 		for(Integer x: curCFL) {
 			tmpCfl.add(x);
-			cb.notify(tmpCfl);
+			cb.notify(tmpCfl, null);
 		}
 
 		assert terminalBB != -1; // a drivernek be kell allitania a job elindulasa elott
@@ -561,6 +573,7 @@ public class CFLManager {
 
 		tentativeCFL.clear();
 		curCFL.clear();
+		sems.clear();
 
 		cflSendSeqNum = 0;
 

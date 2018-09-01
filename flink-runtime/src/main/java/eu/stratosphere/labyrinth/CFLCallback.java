@@ -19,6 +19,8 @@
 package eu.stratosphere.labyrinth;
 
 import java.util.List;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.Lock;
 
 /**
  *
@@ -26,7 +28,7 @@ import java.util.List;
 public interface CFLCallback {
 
 	// Note: always only one element is added
-	void notify(List<Integer> newCFL);
+	void notify(List<Integer> newCFL, Semaphore sem);
 
 	void notifyTerminalBB();
 
