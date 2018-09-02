@@ -422,8 +422,9 @@ public class CFLManager {
 			});
 		}
 
+		ArrayList<Integer> CFLToPass = new ArrayList<>(curCFL);
 		for (CFLCallback cb: callbacks) {
-			cb.notify(curCFL);
+			cb.notify(CFLToPass);
 		}
 
 		assert callbacks.size() == 0 || terminalBB != -1; // A drivernek be kell allitania a job elindulasa elott. Viszont ebbe a fieldbe a BagOperatorHost.setup-ban kerul.
@@ -470,7 +471,8 @@ public class CFLManager {
 		List<Integer> tmpCfl = new ArrayList<>();
 		for(Integer x: curCFL) {
 			tmpCfl.add(x);
-			cb.notify(tmpCfl);
+			ArrayList<Integer> CFLToPass = new ArrayList<>(tmpCfl);
+			cb.notify(CFLToPass);
 		}
 
 		assert terminalBB != -1; // a drivernek be kell allitania a job elindulasa elott
