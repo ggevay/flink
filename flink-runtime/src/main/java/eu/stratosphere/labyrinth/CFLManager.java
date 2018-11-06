@@ -118,7 +118,7 @@ public class CFLManager {
 //	private final SeqNumAtomicBools recvdSeqNums;
 
 	private List<Integer> tentativeCFL = new ArrayList<>(); // ez lehet lyukas, ha nem sorrendben erkeznek meg az elemek
-	private List<Integer> curCFL = new ArrayList<>(); // ez sosem lyukas
+	private List<Integer> curCFL = new ArrayList<>(); // ez sosem lyukas // could be changed to fastutils IntArrayList
 
 	private List<CFLCallback> callbacks = new ArrayList<>();
 
@@ -130,6 +130,7 @@ public class CFLManager {
 
 	// https://stackoverflow.com/questions/6012640/locking-strategies-and-techniques-for-preventing-deadlocks-in-code
 	// We obtain multiple locks only in the following orders:
+	// ! This might be stale since the workQueue refactoring
 	// When receiving a msg:
 	//   CFLManager -> BagOperatorHost -> msgSendLock  or
 	//   CFLManager -> msgSendLock  (when the msg triggers sending closeInputBag)
@@ -572,7 +573,7 @@ public class CFLManager {
 
 		public final HashSet<BagID> inputs = new HashSet<>();
 		public final HashSet<BagID> inputTo = new HashSet<>();
-		public final ArrayList<BagID> inputToList = new ArrayList<>(16);
+		public final ArrayList<BagID> inputToList = new ArrayList<>(16); // 1 might be better
 		public final BitSet consumedBy = new BitSet();
 
 		public short para = -2;
