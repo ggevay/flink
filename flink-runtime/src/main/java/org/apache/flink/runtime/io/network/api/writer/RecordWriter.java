@@ -98,7 +98,8 @@ public class RecordWriter<T extends IOReadableWritable> {
 	}
 
 	public void emit(T record) throws IOException, InterruptedException {
-		emit(record, channelSelector.selectChannels(record, numChannels));
+		//emit(record, channelSelector.selectChannels(record, numChannels));
+		emitTo0(record);
 	}
 
 	/**
@@ -124,10 +125,35 @@ public class RecordWriter<T extends IOReadableWritable> {
 		serializer.serializeRecord(record);
 
 		boolean pruneAfterCopying = false;
+
+//		if (targetChannels.length != 1 || targetChannels[0] != 0) {
+//			throw new RuntimeException();
+//		}
+
 		for (int channel : targetChannels) {
 			if (copyFromSerializerToTargetChannel(channel)) {
 				pruneAfterCopying = true;
 			}
+		}
+
+		// Make sure we don't hold onto the large intermediate serialization buffer for too long
+		if (pruneAfterCopying) {
+			serializer.prune();
+		}
+	}
+
+	private void emitTo0(T record) throws IOException, InterruptedException {
+		serializer.serializeRecord(record);
+
+		boolean pruneAfterCopying = false;
+
+//		if (targetChannels.length != 1 || targetChannels[0] != 0) {
+//			throw new RuntimeException();
+//		}
+
+		int channel = 0;
+		if (copyFromSerializerToTargetChannel(channel)) {
+			pruneAfterCopying = true;
 		}
 
 		// Make sure we don't hold onto the large intermediate serialization buffer for too long
