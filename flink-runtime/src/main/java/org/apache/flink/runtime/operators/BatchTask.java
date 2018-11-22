@@ -49,6 +49,8 @@ import org.apache.flink.runtime.operators.chaining.ChainedDriver;
 import org.apache.flink.runtime.operators.chaining.ExceptionInChainedStubException;
 import org.apache.flink.runtime.operators.resettable.SpillingResettableMutableObjectIterator;
 import org.apache.flink.runtime.operators.shipping.OutputCollector;
+import org.apache.flink.runtime.operators.shipping.OutputCollector_1writer;
+import org.apache.flink.runtime.operators.shipping.OutputCollector_3writers;
 import org.apache.flink.runtime.operators.shipping.OutputEmitter;
 import org.apache.flink.runtime.operators.shipping.ShipStrategyType;
 import org.apache.flink.runtime.operators.sort.CombiningUnilateralSortMerger;
@@ -1275,7 +1277,14 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 		if (eventualOutputs != null) {
 			eventualOutputs.addAll(writers);
 		}
-		return new OutputCollector<T>(writers, serializerFactory.getSerializer());
+		//return new OutputCollector<T>(writers, serializerFactory.getSerializer());
+		if (writers.size() == 1) {
+			return new OutputCollector_1writer<>(writers, serializerFactory.getSerializer());
+		} else if (writers.size() == 3) {
+			return new OutputCollector_3writers<>(writers, serializerFactory.getSerializer());
+		} else {
+			return new OutputCollector<T>(writers, serializerFactory.getSerializer());
+		}
 	}
 
 	/**

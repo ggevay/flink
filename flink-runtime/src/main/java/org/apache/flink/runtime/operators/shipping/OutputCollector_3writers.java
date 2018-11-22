@@ -32,25 +32,33 @@ import java.util.List;
  * The OutputCollector collects records, and emits them to the  {@link RecordWriter}s.
  * The OutputCollector tracks to which writers a deep-copy must be given and which not.
  */
-public class OutputCollector<T> implements Collector<T> {
+public class OutputCollector_3writers<T> implements Collector<T> {
 
 	// list of writers
 	private final RecordWriter<SerializationDelegate<T>>[] writers;
 
+	private final RecordWriter<SerializationDelegate<T>> writer0, writer1, writer2;
+
 	private final SerializationDelegate<T> delegate;
 
-	
+
 	/**
-	 * Initializes the output collector with a set of writers. 
-	 * To specify for a writer that it must be fed with a deep-copy, set the bit in the copy flag bit mask to 1 that 
+	 * Initializes the output collector with a set of writers.
+	 * To specify for a writer that it must be fed with a deep-copy, set the bit in the copy flag bit mask to 1 that
 	 * corresponds to the position of the writer within the {@link List}.
-	 * 
+	 *
 	 * @param writers List of all writers.
 	 */
 	@SuppressWarnings("unchecked")
-	public OutputCollector(List<RecordWriter<SerializationDelegate<T>>> writers, TypeSerializer<T> serializer) {
+	public OutputCollector_3writers(List<RecordWriter<SerializationDelegate<T>>> writers, TypeSerializer<T> serializer) {
 		this.delegate = new SerializationDelegate<T>(serializer);
 		this.writers = (RecordWriter<SerializationDelegate<T>>[]) writers.toArray(new RecordWriter[writers.size()]);
+		if (writers.size() != 3) {
+			throw new RuntimeException();
+		}
+		writer0 = this.writers[0];
+		writer1 = this.writers[1];
+		writer2 = this.writers[2];
 	}
 
 	/**
@@ -61,9 +69,12 @@ public class OutputCollector<T> implements Collector<T> {
 		if (record != null) { // !!! can be eliminated after inlining !!!
 			this.delegate.setInstance(record);
 			try {
-				for (RecordWriter<SerializationDelegate<T>> writer : writers) {
-					writer.emit(this.delegate);
-				}
+//				for (RecordWriter<SerializationDelegate<T>> writer : writers) {
+//					writer.emit(this.delegate);
+//				}
+				writer0.emit(this.delegate);
+				writer1.emit(this.delegate);
+				writer2.emit(this.delegate);
 			}
 			catch (IOException e) {
 				throw new RuntimeException("Emitting the record caused an I/O exception: " + e.getMessage(), e);

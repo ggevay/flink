@@ -60,11 +60,11 @@ public class ManyMaps {
 
 		//env.getConfig().enableObjectReuse();
 
-		DataSet<Long> xs = env.generateSequence(1, 200*1000*1000);
+		DataSet<Long> xs = env.generateSequence(1, 100*1000*1000);
 
 		xs.map(new org.apache.flink.runtime.operators.Map1()).output(new DiscardingOutputFormat<>());
-		//xs.map(new org.apache.flink.runtime.operators.Map2()).output(new DiscardingOutputFormat<>());
-		//xs.map(new org.apache.flink.runtime.operators.Map3()).output(new DiscardingOutputFormat<>());
+		xs.map(new org.apache.flink.runtime.operators.Map2()).output(new DiscardingOutputFormat<>());
+		xs.map(new org.apache.flink.runtime.operators.Map3()).output(new DiscardingOutputFormat<>());
 
 
 		long start = System.nanoTime();
