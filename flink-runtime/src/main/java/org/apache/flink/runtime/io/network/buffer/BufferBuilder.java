@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.io.network.buffer;
 
+import org.apache.flink.core.memory.HybridMemorySegment;
 import org.apache.flink.core.memory.MemorySegment;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -85,6 +86,24 @@ public class BufferBuilder {
 		memorySegment.put(positionMarker.getCached(), source, toCopy);
 		positionMarker.move(toCopy);
 		return toCopy;
+	}
+
+	public int append_assume4(ByteBuffer source) {
+		checkState(!isFinished());
+
+		int needed = source.remaining();
+		int available = getMaxCapacity() - positionMarker.getCached();
+		int toCopy = Math.min(needed, available);
+
+		if (toCopy == 4) {
+			((HybridMemorySegment)memorySegment).put_numBytes4_offset0(positionMarker.getCached(), source);
+			positionMarker.move(4);
+			return 4;
+		} else {
+			memorySegment.put(positionMarker.getCached(), source, toCopy);
+			positionMarker.move(toCopy);
+			return toCopy;
+		}
 	}
 
 	/**

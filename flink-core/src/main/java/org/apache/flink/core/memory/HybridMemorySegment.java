@@ -415,6 +415,38 @@ public final class HybridMemorySegment extends MemorySegment {
 		}
 	}
 
+	public final void put_numBytes4_offset0(int offset, ByteBuffer source) {
+		// Assumes that numBytes == 4
+		// Assumes that source.arrayOffset() == 0  (not the argument `offset`!)
+
+		final int numBytes = 4;
+
+//		// check the byte array offset and length
+//		if ((offset | numBytes | (offset + numBytes)) < 0) {
+//			throw new IndexOutOfBoundsException();
+//		}
+
+		final int sourceOffset = source.position();
+		final int remaining = source.remaining();
+
+		if (remaining < numBytes) {
+			throw new BufferUnderflowException();
+		}
+
+		if (source.hasArray()) {
+			// move directly into the byte array
+			put(offset, source.array(), sourceOffset + 0, numBytes);
+
+			// this must be after the get() call to ensue that the byte buffer is not
+			// modified in case the call fails
+			source.position(sourceOffset + numBytes);
+		}
+		else {
+			// neither heap buffer nor direct buffer
+			putLoop(offset, source, numBytes);
+		}
+	}
+
 	private void putLoop(int offset, ByteBuffer source, int numBytes) {
 		// Btw. is this buggy?
 		while (source.hasRemaining()) {

@@ -92,7 +92,7 @@ public class SpanningRecordSerializer<T extends IOReadableWritable> implements R
 	 */
 	@Override
 	public SerializationResult copyToBufferBuilder(BufferBuilder targetBuffer) {
-		targetBuffer.append(lengthBuffer);
+		targetBuffer.append_assume4(lengthBuffer);
 		targetBuffer.append(dataBuffer);
 		targetBuffer.commit();
 
