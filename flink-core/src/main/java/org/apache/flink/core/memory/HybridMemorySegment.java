@@ -360,23 +360,48 @@ public final class HybridMemorySegment extends MemorySegment {
 			throw new BufferUnderflowException();
 		}
 
-		if (source.isDirect()) {
-			// copy to the target memory directly
-			final long sourcePointer = getAddress(source) + sourceOffset;
-			final long targetPointer = address + offset;
+//		if (source.isDirect()) {
+//			// copy to the target memory directly
+//			final long sourcePointer = getAddress(source) + sourceOffset;
+//			final long targetPointer = address + offset;
+//
+//			if (targetPointer <= addressLimit - numBytes) {
+//				UNSAFE.copyMemory(null, sourcePointer, heapMemory, targetPointer, numBytes);
+//				source.position(sourceOffset + numBytes);
+//			}
+//			else if (address > addressLimit) {
+//				throw new IllegalStateException("segment has been freed");
+//			}
+//			else {
+//				throw new IndexOutOfBoundsException();
+//			}
+//		}
+//		else if (source.hasArray()) {
+//			// move directly into the byte array
+//			put(offset, source.array(), sourceOffset + source.arrayOffset(), numBytes);
+//
+//			// this must be after the get() call to ensue that the byte buffer is not
+//			// modified in case the call fails
+//			source.position(sourceOffset + numBytes);
+//		}
+//		else {
+//			// neither heap buffer nor direct buffer
+//			while (source.hasRemaining()) {
+//				put(offset++, source.get());
+//			}
+//		}
 
-			if (targetPointer <= addressLimit - numBytes) {
-				UNSAFE.copyMemory(null, sourcePointer, heapMemory, targetPointer, numBytes);
-				source.position(sourceOffset + numBytes);
-			}
-			else if (address > addressLimit) {
-				throw new IllegalStateException("segment has been freed");
-			}
-			else {
-				throw new IndexOutOfBoundsException();
-			}
-		}
-		else if (source.hasArray()) {
+		/* We can't do the following, because source.hasArray is not constant, because HeapByteBuffer.isReadOnly is not final
+		   // It is de facto final though, so it could be maybe added as a special case, but I'm not sure if it is worth it.
+
+		put(offset, source.array(), sourceOffset + source.arrayOffset(), numBytes);
+
+		// this must be after the get() call to ensue that the byte buffer is not
+		// modified in case the call fails
+		source.position(sourceOffset + numBytes);
+		*/
+
+		if (source.hasArray()) {
 			// move directly into the byte array
 			put(offset, source.array(), sourceOffset + source.arrayOffset(), numBytes);
 
@@ -386,9 +411,14 @@ public final class HybridMemorySegment extends MemorySegment {
 		}
 		else {
 			// neither heap buffer nor direct buffer
-			while (source.hasRemaining()) {
-				put(offset++, source.get());
-			}
+			putLoop(offset, source, numBytes);
+		}
+	}
+
+	private void putLoop(int offset, ByteBuffer source, int numBytes) {
+		// Btw. is this buggy?
+		while (source.hasRemaining()) {
+			put(offset++, source.get());
 		}
 	}
 
