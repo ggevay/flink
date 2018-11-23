@@ -62,10 +62,67 @@ abstract class AbstractRecordReader<T extends IOReadableWritable> extends Abstra
 		}
 	}
 
+	private void bufConsumed() {
+		final Buffer currentBuffer = currentRecordDeserializer.getCurrentBuffer();
+
+		currentBuffer.recycleBuffer();
+		currentRecordDeserializer = null;
+	}
+
 	protected boolean getNextRecord(T target) throws IOException, InterruptedException {
 		if (isFinished) {
 			return false;
 		}
+
+		if (currentRecordDeserializer != null) {
+			DeserializationResult result = currentRecordDeserializer.getNextRecord(target);
+
+			if (result.isBufferConsumed()) {
+				bufConsumed();
+			}
+
+			if (result.isFullRecord()) {
+				return true;
+			}
+		}
+
+		return getNextRecordUncommon(target);
+	}
+
+	private boolean getNextRecordUncommon(T target) throws IOException, InterruptedException {
+
+		// copy-paste of the second part of the loop:
+
+		final BufferOrEvent bufferOrEvent0 = inputGate.getNextBufferOrEvent().orElseThrow(IllegalStateException::new);
+
+		if (bufferOrEvent0.isBuffer()) {
+			currentRecordDeserializer = recordDeserializers[bufferOrEvent0.getChannelIndex()];
+			currentRecordDeserializer.setNextBuffer(bufferOrEvent0.getBuffer());
+		}
+		else {
+			// sanity check for leftover data in deserializers. events should only come between
+			// records, not in the middle of a fragment
+			if (recordDeserializers[bufferOrEvent0.getChannelIndex()].hasUnfinishedData()) {
+				throw new IOException(
+						"Received an event in channel " + bufferOrEvent0.getChannelIndex() + " while still having "
+								+ "data from a record. This indicates broken serialization logic. "
+								+ "If you are using custom serialization code (Writable or Value types), check their "
+								+ "serialization routines. In the case of Kryo, check the respective Kryo serializer.");
+			}
+
+			if (handleEvent(bufferOrEvent0.getEvent())) {
+				if (inputGate.isFinished()) {
+					isFinished = true;
+					return false;
+				}
+				else if (hasReachedEndOfSuperstep()) {
+					return false;
+				}
+				// else: More data is coming...
+			}
+		}
+
+		// end of copy-paste
 
 		while (true) {
 			if (currentRecordDeserializer != null) {
@@ -82,6 +139,8 @@ abstract class AbstractRecordReader<T extends IOReadableWritable> extends Abstra
 					return true;
 				}
 			}
+
+			// second part of the loop (copy-pasted above):
 
 			final BufferOrEvent bufferOrEvent = inputGate.getNextBufferOrEvent().orElseThrow(IllegalStateException::new);
 
