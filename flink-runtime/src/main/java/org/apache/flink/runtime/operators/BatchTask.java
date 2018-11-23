@@ -254,16 +254,16 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 
 
 
-		ClassLoader userCodeClassLoader = getUserCodeClassLoader();
-		S mystub = config.<S>getStubWrapper(userCodeClassLoader).getUserCodeObject((Class<S>)MapFunction.class, userCodeClassLoader);
-
-		if (mystub.getClass().equals(Map1.class)) {
-			this.driver = new MapDriver1();
-		} else if (mystub.getClass().equals(Map2.class)) {
-			this.driver = new MapDriver2();
-		} else if (mystub.getClass().equals(Map3.class)) {
-			this.driver = new MapDriver3();
-		} else
+//		ClassLoader userCodeClassLoader = getUserCodeClassLoader();
+//		S mystub = config.<S>getStubWrapper(userCodeClassLoader).getUserCodeObject((Class<S>)MapFunction.class, userCodeClassLoader);
+//
+//		if (mystub.getClass().equals(Map1.class)) {
+//			this.driver = new MapDriver1();
+//		} else if (mystub.getClass().equals(Map2.class)) {
+//			this.driver = new MapDriver2();
+//		} else if (mystub.getClass().equals(Map3.class)) {
+//			this.driver = new MapDriver3();
+//		} else
 			this.driver = InstantiationUtil.instantiate(driverClass, Driver.class);
 
 
