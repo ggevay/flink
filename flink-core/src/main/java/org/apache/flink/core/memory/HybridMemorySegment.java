@@ -233,6 +233,36 @@ public final class HybridMemorySegment extends MemorySegment {
 		}
 	}
 
+	/**
+	 * @param index The position in the memory segment array, where the data is put.
+	 * @param src The source array to copy the data from.
+	 * @param offset The offset in the source array where the copying is started.
+	 */
+	private final void put4(int index, byte[] src, int offset) {
+		final int length = 4;
+
+		// check the byte array offset and length
+		if ((offset | length | (offset + length) | (src.length - (offset + length))) < 0) {
+			throw new IndexOutOfBoundsException();
+		}
+
+		final long pos = address + index;
+
+		if (index >= 0 && pos <= addressLimit - length) {
+			final long arrayAddress = BYTE_ARRAY_BASE_OFFSET + offset;
+			//UNSAFE.copyMemory(src, arrayAddress, heapMemory, pos, length);
+			int x = UNSAFE.getInt(src, arrayAddress);
+			UNSAFE.putInt(heapMemory, pos, x);
+		}
+		else if (address > addressLimit) {
+			throw new IllegalStateException("segment has been freed");
+		}
+		else {
+			// index is in fact invalid
+			throw new IndexOutOfBoundsException();
+		}
+	}
+
 	@Override
 	public final boolean getBoolean(int index) {
 		return get(index) != 0;
@@ -435,7 +465,7 @@ public final class HybridMemorySegment extends MemorySegment {
 
 		if (source.hasArray()) {
 			// move directly into the byte array
-			put(offset, source.array(), sourceOffset + 0, numBytes);
+			put4(offset, source.array(), sourceOffset);
 
 			// this must be after the get() call to ensue that the byte buffer is not
 			// modified in case the call fails
