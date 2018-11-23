@@ -109,12 +109,7 @@ public class SpillingAdaptiveSpanningRecordDeserializer<T extends IOReadableWrit
 					if (remaining > 0) {
 						return DeserializationResult.INTERMEDIATE_RECORD_FROM_BUFFER;
 					}
-					else if (remaining == 0) {
-						return DeserializationResult.LAST_RECORD_FROM_BUFFER;
-					}
-					else {
-						throw new IndexOutOfBoundsException("Remaining = " + remaining);
-					}
+					else return getNextRecord_remaining_ng0(remaining);
 				}
 				catch (IndexOutOfBoundsException e) {
 					throw new IOException(BROKEN_SERIALIZATION_ERROR_MESSAGE, e);
@@ -123,18 +118,40 @@ public class SpillingAdaptiveSpanningRecordDeserializer<T extends IOReadableWrit
 			else {
 				// we got the length, but we need the rest from the spanning deserializer
 				// and need to wait for more buffers
-				this.spanningWrapper.initializeWithPartialRecord(this.nonSpanningWrapper, len);
-				this.nonSpanningWrapper.clear();
-				return DeserializationResult.PARTIAL_RECORD;
+				return getNextRecord_initializeWithPartialRecord(len);
 			}
 		} else if (nonSpanningRemaining > 0) {
 			// we have an incomplete length
 			// add our part of the length to the length buffer
-			this.spanningWrapper.initializeWithPartialLength(this.nonSpanningWrapper);
-			this.nonSpanningWrapper.clear();
-			return DeserializationResult.PARTIAL_RECORD;
+			return getNextRecord_initializeWithPartialLength();
 		}
 
+		// spanning record case
+		return getNextRecord_spanning(target);
+	}
+
+	private DeserializationResult getNextRecord_remaining_ng0(int remaining) throws IOException {
+		if (remaining == 0) {
+			return DeserializationResult.LAST_RECORD_FROM_BUFFER;
+		}
+		else {
+			throw new IndexOutOfBoundsException("Remaining = " + remaining);
+		}
+	}
+
+	private DeserializationResult getNextRecord_initializeWithPartialRecord(int len) throws IOException {
+		this.spanningWrapper.initializeWithPartialRecord(this.nonSpanningWrapper, len);
+		this.nonSpanningWrapper.clear();
+		return DeserializationResult.PARTIAL_RECORD;
+	}
+
+	private DeserializationResult getNextRecord_initializeWithPartialLength() throws IOException {
+		this.spanningWrapper.initializeWithPartialLength(this.nonSpanningWrapper);
+		this.nonSpanningWrapper.clear();
+		return DeserializationResult.PARTIAL_RECORD;
+	}
+
+	private DeserializationResult getNextRecord_spanning(T target) throws IOException {
 		// spanning record case
 		if (this.spanningWrapper.hasFullRecord()) {
 			// get the full record
