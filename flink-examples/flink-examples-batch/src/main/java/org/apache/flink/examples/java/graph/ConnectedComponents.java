@@ -69,12 +69,24 @@ import org.apache.flink.util.Collector;
 @SuppressWarnings("serial")
 public class ConnectedComponents {
 
-	// *************************************************************************
-	//     PROGRAM
-	// *************************************************************************
+	private static int n = 10;
+
+	private static long[] times = new long[n];
 
 	public static void main(String... args) throws Exception {
 
+		for (int i=0; i<n; i++) {
+			run(i, args);
+		}
+
+		System.out.println("Times:");
+
+		for (int i=0; i<n; i++) {
+			System.out.println(times[i]);
+		}
+	}
+
+	public static void run(int i, String... args) throws Exception {
 		// Checking input parameters
 		final ParameterTool params = ParameterTool.fromArgs(args);
 
@@ -87,12 +99,20 @@ public class ConnectedComponents {
 		env.getConfig().setGlobalJobParameters(params);
 
 		// read vertex and edge data
-		DataSet<Long> vertices = getVertexDataSet(env, params);
+		//DataSet<Long> vertices = getVertexDataSet(env, params);
 		DataSet<Tuple2<Long, Long>> edges = getEdgeDataSet(env, params).flatMap(new UndirectEdge());
+
+		DataSet<Long> vertices = edges.flatMap(new FlatMapFunction<Tuple2<Long, Long>, Long>() {
+			@Override
+			public void flatMap(Tuple2<Long, Long> value, Collector<Long> out) throws Exception {
+				out.collect(value.f0);
+				out.collect(value.f1);
+			}
+		}).distinct();
 
 		// assign the initial components (equal to the vertex id)
 		DataSet<Tuple2<Long, Long>> verticesWithInitialId =
-			vertices.map(new DuplicateValue<Long>());
+				vertices.map(new DuplicateValue<Long>());
 
 		// open a delta iteration
 		DeltaIteration<Tuple2<Long, Long>, Tuple2<Long, Long>> iteration =
@@ -107,6 +127,10 @@ public class ConnectedComponents {
 		// close the delta iteration (delta and new workset are identical)
 		DataSet<Tuple2<Long, Long>> result = iteration.closeWith(changes, changes);
 
+
+
+		long start = System.nanoTime();
+
 		// emit result
 		if (params.has("output")) {
 			result.writeAsCsv(params.get("output"), "\n", " ");
@@ -116,6 +140,11 @@ public class ConnectedComponents {
 			System.out.println("Printing result to stdout. Use --output to specify output path.");
 			result.print();
 		}
+
+		long end = System.nanoTime();
+		long elapsed = end - start;
+		System.out.println(elapsed);
+		times[i] = elapsed;
 	}
 
 	// *************************************************************************
@@ -200,7 +229,7 @@ public class ConnectedComponents {
 
 	private static DataSet<Tuple2<Long, Long>> getEdgeDataSet(ExecutionEnvironment env, ParameterTool params) {
 		if (params.has("edges")) {
-			return env.readCsvFile(params.get("edges")).fieldDelimiter(" ").types(Long.class, Long.class);
+			return env.readCsvFile(params.get("edges")).fieldDelimiter("\t").types(Long.class, Long.class);
 		} else {
 			System.out.println("Executing Connected Components example with default edges data set.");
 			System.out.println("Use --edges to specify file input.");
