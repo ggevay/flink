@@ -27,6 +27,7 @@ import org.apache.flink.api.common.functions.Partitioner;
 import org.apache.flink.api.common.functions.util.FunctionUtils;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeComparatorFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.io.IOReadableWritable;
@@ -1007,7 +1008,9 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 		@SuppressWarnings("unchecked")
 		MutableReader<DeserializationDelegate<?>> reader = (MutableReader<DeserializationDelegate<?>>) inputReader;
 		@SuppressWarnings({ "unchecked", "rawtypes" })
-		final MutableObjectIterator<?> iter = new ReaderIterator(reader, serializerFactory.getSerializer());
+		//final MutableObjectIterator<?> iter = new ReaderIterator(reader, serializerFactory.getSerializer());
+		final MutableObjectIterator<?> iter = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.operators.util.ReaderIterator",
+				reader, serializerFactory.getSerializer());
 		return iter;
 	}
 
