@@ -859,8 +859,11 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 				this.inputs[i] = null;
 			} else if (cached) {
 				@SuppressWarnings({ "unchecked", "rawtypes" })
-				SpillingResettableMutableObjectIterator<?> iter = new SpillingResettableMutableObjectIterator(
-					getInput(i), this.inputSerializers[i].getSerializer(), getMemoryManager(), getIOManager(), memoryPages, this);
+//				SpillingResettableMutableObjectIterator<?> iter = new SpillingResettableMutableObjectIterator(
+//					getInput(i), this.inputSerializers[i].getSerializer(), getMemoryManager(), getIOManager(), memoryPages, this);
+				SpillingResettableMutableObjectIterator<?> iter = SpecUtil.copyClassAndInstantiate(
+						"org.apache.flink.runtime.operators.resettable.SpillingResettableMutableObjectIterator",
+						getInput(i), this.inputSerializers[i].getSerializer(), getMemoryManager(), getIOManager(), memoryPages, this);
 				this.resettableInputs[i] = iter;
 				this.inputs[i] = iter;
 			}
