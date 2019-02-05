@@ -80,6 +80,24 @@ under the License.
 			<!-- managed version -->
 		</dependency>
 
+		<!-- ASM (for spec) -->
+		<!-- https://search.maven.org/search?q=g:org.ow2.asm -->
+		<dependency>
+			<groupId>org.ow2.asm</groupId>
+			<artifactId>asm</artifactId>
+			<version>7.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.ow2.asm</groupId>
+			<artifactId>asm-commons</artifactId>
+			<version>7.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.ow2.asm</groupId>
+			<artifactId>asm-util</artifactId>
+			<version>7.0</version>
+		</dependency>
+
 		<!-- ================== test dependencies ================== -->
 
 		<dependency>
