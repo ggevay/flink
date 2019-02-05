@@ -57,18 +57,26 @@ public class SpecUtil {
         // We are looking for a ctor where all our args are assignable to the corresponding param (subclass or same type)
         Constructor mCtor = null;
         for (Constructor<?> ctor: clazz.getConstructors()) {
-            boolean allMatch = true;
-            int i=0;
-            for (Class<?> param: ctor.getParameterTypes()) {
-                if (!param.isAssignableFrom(args[i++].getClass())) {
-                    allMatch = false;
-                    break;
+            Class<?>[] params = ctor.getParameterTypes();
+            if (params.length == args.length) {
+                boolean allMatch = true;
+                int i = 0;
+                for (Class<?> param : ctor.getParameterTypes()) {
+                    Object arg = args[i++];
+                    if (!(arg == null || param.isAssignableFrom(arg.getClass()))) {
+                        allMatch = false;
+                        break;
+                    }
+                }
+                if (allMatch) {
+                    mCtor = ctor;
+                    break; // todo: maybe instead check whether there is only one overload that matches?
                 }
             }
-            if (allMatch) {
-                mCtor = ctor;
-                break; // todo: maybe instead check whether there is only one overload that matches?
-            }
+        }
+
+        if (mCtor == null) {
+            throw new RuntimeException("Ctor not found for " + clazz);
         }
 
         // Old code (doesn't work for arg types being subclasses of param types)
