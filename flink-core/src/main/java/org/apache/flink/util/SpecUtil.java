@@ -18,48 +18,73 @@ public class SpecUtil {
     private final static boolean enabled = true;
 
 
-    public static <T> T copyClassAndInstantiate(Class clazz, Object... ctorArgs) throws Exception {
+    public static <T> T copyClassAndInstantiate(Class clazz, Object... ctorArgs) {
         return copyClassAndInstantiate(clazz.getName(), ctorArgs);
     }
 
-    public synchronized static <T> T copyClassAndInstantiate(String name, Object... ctorArgs) throws Exception {
+    public synchronized static <T> T copyClassAndInstantiate(String name, Object... ctorArgs) {
+        try {
 
-        if (!enabled) {
-            return (T) instantiate(Class.forName(name), ctorArgs);
+            if (!enabled) {
+                return (T) instantiate(Class.forName(name), ctorArgs);
+            }
+
+            ClassReader reader = new ClassReader(name);
+            ClassWriter writer = new ClassWriter(reader, 0);
+
+            int oldCount = copyCounts.getOrDefault(name, 0);
+            String newName = name + "__copy_" + oldCount;
+            copyCounts.put(name, oldCount + 1);
+
+            String nameWithSlashes = name.replace('.', '/');
+            String newNameWithSlashes = newName.replace('.', '/');
+            ClassVisitor visitor = new ClassRemapper(writer, new SimpleRemapper(nameWithSlashes, newNameWithSlashes));
+
+            reader.accept(visitor, 0);
+
+            Class copied = loadClass(newName, writer.toByteArray());
+
+            return (T) instantiate(copied, ctorArgs);
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-
-        ClassReader reader = new ClassReader(name);
-        ClassWriter writer = new ClassWriter(reader, 0);
-
-        int oldCount = copyCounts.getOrDefault(name, 0);
-        String newName = name + "__copy_" + oldCount;
-        copyCounts.put(name, oldCount + 1);
-
-        String nameWithSlashes = name.replace('.', '/');
-        String newNameWithSlashes = newName.replace('.', '/');
-        ClassVisitor visitor = new ClassRemapper(writer, new SimpleRemapper(nameWithSlashes, newNameWithSlashes));
-
-        reader.accept(visitor, 0);
-
-        Class copied = loadClass(newName, writer.toByteArray());
-
-        return (T) instantiate(copied, ctorArgs);
     }
 
     // automatically finds the appropriate ctor based on the given arguments' types
     private static Object instantiate(Class clazz, Object... args) throws IllegalAccessException, InvocationTargetException, InstantiationException {
-        Class[] ctorParamTypes = new Class[args.length];
-        int i=0;
-        for (Object arg: args) {
-            ctorParamTypes[i++] = arg.getClass();
+
+        // We are looking for a ctor where all our args are assignable to the corresponding param (subclass or same type)
+        Constructor mCtor = null;
+        for (Constructor<?> ctor: clazz.getConstructors()) {
+            boolean allMatch = true;
+            int i=0;
+            for (Class<?> param: ctor.getParameterTypes()) {
+                if (!param.isAssignableFrom(args[i++].getClass())) {
+                    allMatch = false;
+                    break;
+                }
+            }
+            if (allMatch) {
+                mCtor = ctor;
+                break; // todo: maybe instead check whether there is only one overload that matches?
+            }
         }
-        Constructor ctor;
-        try {
-            ctor = clazz.getConstructor(ctorParamTypes);
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
-        return ctor.newInstance(args);
+
+        // Old code (doesn't work for arg types being subclasses of param types)
+//        Class[] ctorParamTypes = new Class[args.length];
+//        int i=0;
+//        for (Object arg: args) {
+//            ctorParamTypes[i++] = arg.getClass();
+//        }
+//        Constructor ctor;
+//        try {
+//            ctor = clazz.getConstructor(ctorParamTypes);
+//        } catch (NoSuchMethodException e) {
+//            throw new RuntimeException(e);
+//        }
+
+        return mCtor.newInstance(args);
     }
 
 
