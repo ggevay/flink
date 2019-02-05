@@ -676,18 +676,29 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 
 			if (groupSize == 1) {
 				// non-union case
-				inputReaders[i] = new MutableRecordReader<IOReadableWritable>(
+//				inputReaders[i] = new MutableRecordReader<IOReadableWritable>(
+//						getEnvironment().getInputGate(currentReaderOffset),
+//						getEnvironment().getTaskManagerInfo().getTmpDirectories());
+
+				inputReaders[i] = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.reader.MutableRecordReader",
 						getEnvironment().getInputGate(currentReaderOffset),
 						getEnvironment().getTaskManagerInfo().getTmpDirectories());
+
 			} else if (groupSize > 1){
 				// union case
 				InputGate[] readers = new InputGate[groupSize];
 				for (int j = 0; j < groupSize; ++j) {
 					readers[j] = getEnvironment().getInputGate(currentReaderOffset + j);
 				}
-				inputReaders[i] = new MutableRecordReader<IOReadableWritable>(
+
+//				inputReaders[i] = new MutableRecordReader<IOReadableWritable>(
+//						new UnionInputGate(readers),
+//						getEnvironment().getTaskManagerInfo().getTmpDirectories());
+
+				inputReaders[i] = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.reader.MutableRecordReader",
 						new UnionInputGate(readers),
 						getEnvironment().getTaskManagerInfo().getTmpDirectories());
+
 			} else {
 				throw new Exception("Illegal input group size in task configuration: " + groupSize);
 			}
@@ -719,7 +730,10 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 			final int groupSize = this.config.getBroadcastGroupSize(i);
 			if (groupSize == 1) {
 				// non-union case
-				broadcastInputReaders[i] = new MutableRecordReader<IOReadableWritable>(
+//				broadcastInputReaders[i] = new MutableRecordReader<IOReadableWritable>(
+//						getEnvironment().getInputGate(currentReaderOffset),
+//						getEnvironment().getTaskManagerInfo().getTmpDirectories());
+				broadcastInputReaders[i] = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.reader.MutableRecordReader",
 						getEnvironment().getInputGate(currentReaderOffset),
 						getEnvironment().getTaskManagerInfo().getTmpDirectories());
 			} else if (groupSize > 1){
@@ -728,7 +742,10 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 				for (int j = 0; j < groupSize; ++j) {
 					readers[j] = getEnvironment().getInputGate(currentReaderOffset + j);
 				}
-				broadcastInputReaders[i] = new MutableRecordReader<IOReadableWritable>(
+//				broadcastInputReaders[i] = new MutableRecordReader<IOReadableWritable>(
+//						new UnionInputGate(readers),
+//						getEnvironment().getTaskManagerInfo().getTmpDirectories());
+				broadcastInputReaders[i] = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.reader.MutableRecordReader",
 						new UnionInputGate(readers),
 						getEnvironment().getTaskManagerInfo().getTmpDirectories());
 			} else {
