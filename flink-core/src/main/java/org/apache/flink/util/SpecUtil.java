@@ -15,7 +15,12 @@ public class SpecUtil {
 
     private static final Map<String, Integer> copyCounts = new TreeMap<>();
 
-    public static Object copyClassAndInstantiate(String name, Object... ctorArgs) throws Exception {
+
+    public static <T> T copyClassAndInstantiate(Class clazz, Object... ctorArgs) throws Exception {
+        return copyClassAndInstantiate(clazz.getName(), ctorArgs);
+    }
+
+    public synchronized static <T> T copyClassAndInstantiate(String name, Object... ctorArgs) throws Exception {
         ClassReader reader = new ClassReader(name);
         ClassWriter writer = new ClassWriter(reader, 0);
 
@@ -31,7 +36,7 @@ public class SpecUtil {
 
         Class copied = loadClass(newName, writer.toByteArray());
 
-        return instantiate(copied, ctorArgs);
+        return (T) instantiate(copied, ctorArgs);
     }
 
     // automatically finds the appropriate ctor based on the given arguments' types
