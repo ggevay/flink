@@ -64,6 +64,7 @@ import org.apache.flink.util.Collector;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.MutableObjectIterator;
 
+import org.apache.flink.util.SpecUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -250,7 +251,8 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 
 		// now get the operator class which drives the operation
 		final Class<? extends Driver<S, OT>> driverClass = this.config.getDriver();
-		this.driver = InstantiationUtil.instantiate(driverClass, Driver.class);
+		//this.driver = InstantiationUtil.instantiate(driverClass, Driver.class);
+		this.driver = SpecUtil.copyClassAndInstantiate(driverClass);
 
 		String headName =  getEnvironment().getTaskInfo().getTaskName().split("->")[0].trim();
 		this.metrics = getEnvironment().getMetricGroup()
