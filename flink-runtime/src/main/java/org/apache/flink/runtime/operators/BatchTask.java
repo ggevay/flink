@@ -1265,14 +1265,18 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 
 			final ChannelSelector<SerializationDelegate<T>> oe;
 			if (compFactory == null) {
-				oe = new OutputEmitter<T>(strategy, indexInSubtaskGroup);
+//				oe = new OutputEmitter<T>(strategy, indexInSubtaskGroup);
+				oe = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.operators.shipping.OutputEmitter",
+						strategy, indexInSubtaskGroup);
 			}
 			else {
 				final DataDistribution dataDist = config.getOutputDataDistribution(i, cl);
 				final Partitioner<?> partitioner = config.getOutputPartitioner(i, cl);
 
 				final TypeComparator<T> comparator = compFactory.createComparator();
-				oe = new OutputEmitter<T>(strategy, indexInSubtaskGroup, comparator, partitioner, dataDist);
+//				oe = new OutputEmitter<T>(strategy, indexInSubtaskGroup, comparator, partitioner, dataDist);
+				oe = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.operators.shipping.OutputEmitter",
+						strategy, indexInSubtaskGroup, comparator, partitioner, dataDist);
 			}
 
 			final RecordWriter<SerializationDelegate<T>> recordWriter = RecordWriter.createRecordWriter(
@@ -1287,7 +1291,9 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 		if (eventualOutputs != null) {
 			eventualOutputs.addAll(writers);
 		}
-		return new OutputCollector<T>(writers, serializerFactory.getSerializer());
+//		return new OutputCollector<T>(writers, serializerFactory.getSerializer());
+		return SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.operators.shipping.OutputCollector",
+				writers, serializerFactory.getSerializer());
 	}
 
 	/**

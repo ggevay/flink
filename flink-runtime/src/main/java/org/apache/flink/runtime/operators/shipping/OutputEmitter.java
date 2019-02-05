@@ -69,7 +69,7 @@ public class OutputEmitter<T> implements ChannelSelector<SerializationDelegate<T
 	 * 
 	 * @param strategy The distribution strategy to be used.
 	 */
-	public OutputEmitter(ShipStrategyType strategy, int indexInSubtaskGroup) {
+	public OutputEmitter(ShipStrategyType strategy, Integer indexInSubtaskGroup) {
 		this(strategy, indexInSubtaskGroup, null, null, null);
 	}
 	
@@ -87,7 +87,7 @@ public class OutputEmitter<T> implements ChannelSelector<SerializationDelegate<T
 	@SuppressWarnings("unchecked")
 	public OutputEmitter(
 			ShipStrategyType strategy,
-			int indexInSubtaskGroup,
+			Integer indexInSubtaskGroup,
 			TypeComparator<T> comparator,
 			Partitioner<?> partitioner,
 			DataDistribution distribution) {
