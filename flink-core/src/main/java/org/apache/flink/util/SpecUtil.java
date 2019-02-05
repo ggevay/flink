@@ -15,12 +15,19 @@ public class SpecUtil {
 
     private static final Map<String, Integer> copyCounts = new TreeMap<>();
 
+    private final static boolean enabled = true;
+
 
     public static <T> T copyClassAndInstantiate(Class clazz, Object... ctorArgs) throws Exception {
         return copyClassAndInstantiate(clazz.getName(), ctorArgs);
     }
 
     public synchronized static <T> T copyClassAndInstantiate(String name, Object... ctorArgs) throws Exception {
+
+        if (!enabled) {
+            return (T) instantiate(Class.forName(name), ctorArgs);
+        }
+
         ClassReader reader = new ClassReader(name);
         ClassWriter writer = new ClassWriter(reader, 0);
 
