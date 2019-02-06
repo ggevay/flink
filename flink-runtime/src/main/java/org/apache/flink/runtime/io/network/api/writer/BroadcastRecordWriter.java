@@ -35,7 +35,7 @@ public class BroadcastRecordWriter<T extends IOReadableWritable> extends RecordW
 	public BroadcastRecordWriter(
 			ResultPartitionWriter writer,
 			ChannelSelector<T> channelSelector,
-			long timeout,
+			Long timeout,
 			String taskName) {
 		super(writer, channelSelector, timeout, taskName);
 	}

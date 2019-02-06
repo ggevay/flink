@@ -28,6 +28,7 @@ import org.apache.flink.runtime.io.network.api.serialization.SpanningRecordSeria
 import org.apache.flink.runtime.io.network.buffer.BufferBuilder;
 import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
 import org.apache.flink.runtime.metrics.groups.TaskIOMetricGroup;
+import org.apache.flink.util.SpecUtil;
 import org.apache.flink.util.XORShiftRandom;
 
 import org.slf4j.Logger;
@@ -88,20 +89,21 @@ public class RecordWriter<T extends IOReadableWritable> {
 	private Throwable flusherException;
 
 	public RecordWriter(ResultPartitionWriter writer) {
-		this(writer, new RoundRobinChannelSelector<T>(), -1, null);
+		this(writer, new RoundRobinChannelSelector<T>(), (long)-1, null);
 	}
 
 	public RecordWriter(
 			ResultPartitionWriter writer,
 			ChannelSelector<T> channelSelector,
-			long timeout,
+			Long timeout,
 			String taskName) {
 		this.targetPartition = writer;
 		this.channelSelector = channelSelector;
 		this.numberOfChannels = writer.getNumberOfSubpartitions();
 		this.channelSelector.setup(numberOfChannels);
 
-		this.serializer = new SpanningRecordSerializer<T>();
+		//this.serializer = new SpanningRecordSerializer<T>();
+		this.serializer = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.serialization.SpanningRecordSerializer");
 		this.bufferBuilders = new Optional[numberOfChannels];
 		this.broadcastChannels = new int[numberOfChannels];
 		for (int i = 0; i < numberOfChannels; i++) {
@@ -317,8 +319,13 @@ public class RecordWriter<T extends IOReadableWritable> {
 			String taskName) {
 		if (channelSelector.isBroadcast()) {
 			return new BroadcastRecordWriter<>(writer, channelSelector, timeout, taskName);
+// These would need creating an interface for RecordWriter
+//			return SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.writer.BroadcastRecordWriter",
+//					writer, channelSelector, timeout, taskName);
 		} else {
 			return new RecordWriter<>(writer, channelSelector, timeout, taskName);
+//			return SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.writer.RecordWriter",
+//					writer, channelSelector, timeout, taskName);
 		}
 	}
 
