@@ -176,6 +176,18 @@ public class RecordWriter<T extends IOReadableWritable> {
 		boolean pruneTriggered = false;
 		BufferBuilder bufferBuilder = getBufferBuilder(targetChannel);
 		SerializationResult result = serializer.copyToBufferBuilder(bufferBuilder);
+		if (result.isFullBuffer()) {
+			pruneTriggered = copyFromSerializerToTargetChannelFullBuffer(targetChannel, result, bufferBuilder);
+		}
+		checkState(!serializer.hasSerializedData(), "All data should be written at once");
+
+		if (flushAlways) {
+			targetPartition.flush(targetChannel);
+		}
+		return pruneTriggered;
+	}
+
+	private boolean copyFromSerializerToTargetChannelFullBuffer(int targetChannel, SerializationResult result, BufferBuilder bufferBuilder) throws IOException, InterruptedException {
 		while (result.isFullBuffer()) {
 			numBytesOut.inc(bufferBuilder.finish());
 			numBuffersOut.inc();
@@ -184,20 +196,14 @@ public class RecordWriter<T extends IOReadableWritable> {
 			// will lead to another buffer request before breaking out (that would not be a
 			// problem per se, but it can lead to stalls in the pipeline).
 			if (result.isFullRecord()) {
-				pruneTriggered = true;
 				bufferBuilders[targetChannel] = Optional.empty();
-				break;
+				return true;
 			}
 
 			bufferBuilder = requestNewBufferBuilder(targetChannel);
 			result = serializer.copyToBufferBuilder(bufferBuilder);
 		}
-		checkState(!serializer.hasSerializedData(), "All data should be written at once");
-
-		if (flushAlways) {
-			targetPartition.flush(targetChannel);
-		}
-		return pruneTriggered;
+		return false;
 	}
 
 	public void broadcastEvent(AbstractEvent event) throws IOException {
