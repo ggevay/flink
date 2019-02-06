@@ -22,7 +22,7 @@ public class SpecUtil {
         return copyClassAndInstantiate(clazz.getName(), ctorArgs);
     }
 
-    public synchronized static <T> T copyClassAndInstantiate(String name, Object... ctorArgs) {
+    public static <T> T copyClassAndInstantiate(String name, Object... ctorArgs) {
         try {
 
             if (!enabled) {
@@ -32,9 +32,12 @@ public class SpecUtil {
             ClassReader reader = new ClassReader(name);
             ClassWriter writer = new ClassWriter(reader, 0);
 
-            int oldCount = copyCounts.getOrDefault(name, 0);
+            int oldCount;
+            synchronized (SpecUtil.class) {
+                oldCount = copyCounts.getOrDefault(name, 0);
+                copyCounts.put(name, oldCount + 1);
+            }
             String newName = name + "__copy_" + oldCount;
-            copyCounts.put(name, oldCount + 1);
 
             String nameWithSlashes = name.replace('.', '/');
             String newNameWithSlashes = newName.replace('.', '/');
