@@ -21,6 +21,7 @@ package org.apache.flink.runtime.operators;
 
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.metrics.Counter;
+import org.apache.flink.runtime.operators.resettable.SpillingResettableMutableObjectIteratorConcrete;
 import org.apache.flink.runtime.operators.util.metrics.CountingCollector;
 import org.apache.flink.runtime.operators.util.metrics.CountingMutableObjectIterator;
 import org.slf4j.Logger;
@@ -212,7 +213,7 @@ public class CrossDriver<T1, T2, OT> implements Driver<CrossFunction<T1, T2, OT>
 							this.taskContext.getContainingTask());
 		this.blockIter = blockVals;
 		
-		final SpillingResettableMutableObjectIterator<T2> spillVals = new SpillingResettableMutableObjectIterator<T2>(
+		final SpillingResettableMutableObjectIterator<T2> spillVals = new SpillingResettableMutableObjectIteratorConcrete<T2>(
 				in2, serializer2, this.memManager, this.taskContext.getIOManager(), this.memPagesForSpillingSide,
 				this.taskContext.getContainingTask());
 		this.spillIter = spillVals;
@@ -275,7 +276,7 @@ public class CrossDriver<T1, T2, OT> implements Driver<CrossFunction<T1, T2, OT>
 		final TypeSerializer<T1> serializer1 = this.taskContext.<T1>getInputSerializer(0).getSerializer();
 		final TypeSerializer<T2> serializer2 = this.taskContext.<T2>getInputSerializer(1).getSerializer();
 		
-		final SpillingResettableMutableObjectIterator<T1> spillVals = new SpillingResettableMutableObjectIterator<T1>(
+		final SpillingResettableMutableObjectIterator<T1> spillVals = new SpillingResettableMutableObjectIteratorConcrete<T1>(
 				in1, serializer1, this.memManager, this.taskContext.getIOManager(), this.memPagesForSpillingSide,
 				this.taskContext.getContainingTask());
 		this.spillIter = spillVals;
@@ -341,7 +342,7 @@ public class CrossDriver<T1, T2, OT> implements Driver<CrossFunction<T1, T2, OT>
 		final TypeSerializer<T1> serializer1 = this.taskContext.<T1>getInputSerializer(0).getSerializer();
 		final TypeSerializer<T2> serializer2 = this.taskContext.<T2>getInputSerializer(1).getSerializer();
 		
-		final SpillingResettableMutableObjectIterator<T2> spillVals = new SpillingResettableMutableObjectIterator<T2>(
+		final SpillingResettableMutableObjectIterator<T2> spillVals = new SpillingResettableMutableObjectIteratorConcrete<T2>(
 				in2, serializer2, this.memManager, this.taskContext.getIOManager(), this.memPagesForSpillingSide,
 				this.taskContext.getContainingTask());
 		this.spillIter = spillVals;
@@ -394,7 +395,7 @@ public class CrossDriver<T1, T2, OT> implements Driver<CrossFunction<T1, T2, OT>
 		final TypeSerializer<T1> serializer1 = this.taskContext.<T1>getInputSerializer(0).getSerializer();
 		final TypeSerializer<T2> serializer2 = this.taskContext.<T2>getInputSerializer(1).getSerializer();
 		
-		final SpillingResettableMutableObjectIterator<T1> spillVals = new SpillingResettableMutableObjectIterator<T1>(
+		final SpillingResettableMutableObjectIterator<T1> spillVals = new SpillingResettableMutableObjectIteratorConcrete<T1>(
 				in1, serializer1, this.memManager, this.taskContext.getIOManager(), this.memPagesForSpillingSide,
 				this.taskContext.getContainingTask());
 		this.spillIter = spillVals;

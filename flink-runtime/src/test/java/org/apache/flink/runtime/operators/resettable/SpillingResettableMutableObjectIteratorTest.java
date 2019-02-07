@@ -92,7 +92,7 @@ public class SpillingResettableMutableObjectIteratorTest {
 			final AbstractInvokable memOwner = new DummyInvokable();
 	
 			// create the resettable Iterator
-			SpillingResettableMutableObjectIterator<Record> iterator = new SpillingResettableMutableObjectIterator<Record>(
+			SpillingResettableMutableObjectIterator<Record> iterator = new SpillingResettableMutableObjectIteratorConcrete<Record>(
 				this.reader, this.serializer, this.memman, this.ioman, 2, memOwner);
 	
 			// open the iterator
@@ -136,7 +136,7 @@ public class SpillingResettableMutableObjectIteratorTest {
 			final AbstractInvokable memOwner = new DummyInvokable();
 	
 			// create the resettable Iterator
-			SpillingResettableMutableObjectIterator<Record> iterator = new SpillingResettableMutableObjectIterator<Record>(
+			SpillingResettableMutableObjectIterator<Record> iterator = new SpillingResettableMutableObjectIteratorConcrete<Record>(
 				this.reader, this.serializer, this.memman, this.ioman, 20, memOwner);
 			
 			// open the iterator
