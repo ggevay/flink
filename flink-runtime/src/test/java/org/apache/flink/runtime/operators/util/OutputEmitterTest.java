@@ -30,6 +30,7 @@ import org.apache.flink.runtime.io.network.api.writer.ChannelSelector;
 import org.apache.flink.runtime.operators.shipping.OutputEmitter;
 import org.apache.flink.runtime.operators.shipping.ShipStrategyType;
 import org.apache.flink.runtime.plugable.SerializationDelegate;
+import org.apache.flink.runtime.plugable.SerializationDelegateConcrete;
 import org.apache.flink.runtime.testutils.recordutils.RecordComparatorFactory;
 import org.apache.flink.runtime.testutils.recordutils.RecordSerializerFactory;
 import org.apache.flink.types.DeserializationException;
@@ -65,7 +66,7 @@ public class OutputEmitterTest {
 		final TestIntComparator testIntComp = new TestIntComparator();
 		final ChannelSelector<SerializationDelegate<Integer>> selector = createChannelSelector(
 			ShipStrategyType.PARTITION_HASH, testIntComp, 100);
-		final SerializationDelegate<Integer> serializationDelegate = new SerializationDelegate<>(new IntSerializer());
+		final SerializationDelegate<Integer> serializationDelegate = new SerializationDelegateConcrete<>(new IntSerializer());
 
 		assertPartitionHashSelectedChannels(selector, serializationDelegate, Integer.MIN_VALUE, 100);
 		assertPartitionHashSelectedChannels(selector, serializationDelegate, -1, 100);
@@ -94,7 +95,7 @@ public class OutputEmitterTest {
 		int fromTaskIndex = toTaskIndex + numberOfChannels;
 		int extraRecords = numberOfChannels / 3;
 		int numRecords = 50000 + extraRecords;
-		final SerializationDelegate<Record> delegate = new SerializationDelegate<>(
+		final SerializationDelegate<Record> delegate = new SerializationDelegateConcrete<>(
 			new RecordSerializerFactory().getSerializer());
 		final ChannelSelector<SerializationDelegate<Record>> selector = new OutputEmitter<>(
 			ShipStrategyType.PARTITION_FORCED_REBALANCE, fromTaskIndex);
@@ -152,7 +153,7 @@ public class OutputEmitterTest {
 
 		final ChannelSelector<SerializationDelegate<Record>> selector = createChannelSelector(
 			ShipStrategyType.PARTITION_HASH, multiComp, numberOfChannels);
-		final SerializationDelegate<Record> delegate = new SerializationDelegate<>(new RecordSerializerFactory().getSerializer());
+		final SerializationDelegate<Record> delegate = new SerializationDelegateConcrete<>(new RecordSerializerFactory().getSerializer());
 
 		int[] hits = new int[numberOfChannels];
 		for (int i = 0; i < numRecords; i++) {
@@ -195,7 +196,7 @@ public class OutputEmitterTest {
 			new int[] {0}, new Class[] {DoubleValue.class}).createComparator();
 		final ChannelSelector<SerializationDelegate<Record>> selector = createChannelSelector(
 			ShipStrategyType.PARTITION_HASH, doubleComp, 100);
-		final SerializationDelegate<Record> delegate = new SerializationDelegate<>(new RecordSerializerFactory().getSerializer());
+		final SerializationDelegate<Record> delegate = new SerializationDelegateConcrete<>(new RecordSerializerFactory().getSerializer());
 
 		PipedInputStream pipedInput = new PipedInputStream(1024 * 1024);
 		DataInputView in = new DataInputViewStreamWrapper(pipedInput);
@@ -251,7 +252,7 @@ public class OutputEmitterTest {
 			new int[] {position}, new Class[] {IntValue.class}).createComparator();
 		final ChannelSelector<SerializationDelegate<Record>> selector = createChannelSelector(
 			ShipStrategyType.PARTITION_HASH, comparator, 100);
-		final SerializationDelegate<Record> delegate = new SerializationDelegate<>(new RecordSerializerFactory().getSerializer());
+		final SerializationDelegate<Record> delegate = new SerializationDelegateConcrete<>(new RecordSerializerFactory().getSerializer());
 
 		Record record = new Record(2);
 		record.setField(fieldNum, new IntValue(1));
@@ -274,7 +275,7 @@ public class OutputEmitterTest {
 		final TypeComparator<Record> comparator = new RecordComparatorFactory(
 			new int[] {0}, new Class[] {recordType == RecordType.INTEGER ? IntValue.class : StringValue.class}).createComparator();
 		final ChannelSelector<SerializationDelegate<Record>> selector = createChannelSelector(shipStrategyType, comparator, numberOfChannels);
-		final SerializationDelegate<Record> delegate = new SerializationDelegate<>(new RecordSerializerFactory().getSerializer());
+		final SerializationDelegate<Record> delegate = new SerializationDelegateConcrete<>(new RecordSerializerFactory().getSerializer());
 
 		return getSelectedChannelsHitCount(selector, delegate, recordType, numRecords, numberOfChannels);
 	}

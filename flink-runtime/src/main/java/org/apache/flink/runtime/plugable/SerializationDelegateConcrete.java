@@ -31,15 +31,31 @@ import java.io.IOException;
  *
  * @param <T> The type to be represented as an IOReadableWritable.
  */
-public interface SerializationDelegate<T> extends IOReadableWritable {
+public class SerializationDelegateConcrete<T> implements SerializationDelegate<T> {
 
-	void setInstance(T instance);
+	private T instance;
 
-	T getInstance();
+	private final TypeSerializer<T> serializer;
+
+	public SerializationDelegateConcrete(TypeSerializer<T> serializer) {
+		this.serializer = serializer;
+	}
+
+	public void setInstance(T instance) {
+		this.instance = instance;
+	}
+
+	public T getInstance() {
+		return this.instance;
+	}
 
 	@Override
-	void write(DataOutputView out) throws IOException;
+	public void write(DataOutputView out) throws IOException {
+		this.serializer.serialize(this.instance, out);
+	}
 
 	@Override
-	void read(DataInputView in) throws IOException;
+	public void read(DataInputView in) throws IOException {
+		throw new IllegalStateException("Deserialization method called on SerializationDelegate.");
+	}
 }

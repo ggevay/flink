@@ -19,6 +19,7 @@ package org.apache.flink.streaming.runtime.partitioner;
 
 import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.runtime.plugable.SerializationDelegate;
+import org.apache.flink.runtime.plugable.SerializationDelegateConcrete;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.util.TestLogger;
 
@@ -34,7 +35,7 @@ public abstract class StreamPartitionerTest extends TestLogger {
 	protected final StreamPartitioner<Tuple> streamPartitioner = createPartitioner();
 	protected final StreamRecord<Tuple> streamRecord = new StreamRecord<>(null);
 	protected final SerializationDelegate<StreamRecord<Tuple>> serializationDelegate =
-		new SerializationDelegate<>(null);
+		new SerializationDelegateConcrete<>(null);
 
 	abstract StreamPartitioner<Tuple> createPartitioner();
 

@@ -21,7 +21,9 @@ package org.apache.flink.runtime.operators.shipping;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
 import org.apache.flink.runtime.plugable.SerializationDelegate;
+import org.apache.flink.runtime.plugable.SerializationDelegateConcrete;
 import org.apache.flink.util.Collector;
+import org.apache.flink.util.SpecUtil;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -49,7 +51,8 @@ public class OutputCollector<T> implements Collector<T> {
 	 */
 	@SuppressWarnings("unchecked")
 	public OutputCollector(List<RecordWriter<SerializationDelegate<T>>> writers, TypeSerializer<T> serializer) {
-		this.delegate = new SerializationDelegate<T>(serializer);
+		//this.delegate = new SerializationDelegateConcrete<>(serializer);
+		this.delegate = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.plugable.SerializationDelegateConcrete", serializer);
 		this.writers = (RecordWriter<SerializationDelegate<T>>[]) writers.toArray(new RecordWriter[writers.size()]);
 	}
 

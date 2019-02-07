@@ -20,6 +20,7 @@ package org.apache.flink.streaming.runtime.partitioner;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.plugable.SerializationDelegate;
+import org.apache.flink.runtime.plugable.SerializationDelegateConcrete;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.util.TestLogger;
 
@@ -36,8 +37,8 @@ public class KeyGroupStreamPartitionerTest extends TestLogger {
 	private KeyGroupStreamPartitioner<Tuple2<String, Integer>, String> keyGroupPartitioner;
 	private StreamRecord<Tuple2<String, Integer>> streamRecord1 = new StreamRecord<>(new Tuple2<>("test", 0));
 	private StreamRecord<Tuple2<String, Integer>> streamRecord2 = new StreamRecord<>(new Tuple2<>("test", 42));
-	private SerializationDelegate<StreamRecord<Tuple2<String, Integer>>> serializationDelegate1 = new SerializationDelegate<>(null);
-	private SerializationDelegate<StreamRecord<Tuple2<String, Integer>>> serializationDelegate2 = new SerializationDelegate<>(null);
+	private SerializationDelegate<StreamRecord<Tuple2<String, Integer>>> serializationDelegate1 = new SerializationDelegateConcrete<>(null);
+	private SerializationDelegate<StreamRecord<Tuple2<String, Integer>>> serializationDelegate2 = new SerializationDelegateConcrete<>(null);
 
 	@Before
 	public void setPartitioner() {
