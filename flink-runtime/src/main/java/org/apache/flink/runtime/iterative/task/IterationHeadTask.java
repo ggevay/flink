@@ -145,7 +145,7 @@ public class IterationHeadTask<X, Y, S extends Function, OT> extends AbstractIte
 		}
 		// now, we can instantiate the sync gate
 		//this.toSync = new RecordWriterConcrete<IOReadableWritable>(getEnvironment().getWriter(syncGateIndex));
-		this.toSync = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.writer.RecordWriterConcrete",
+		this.toSync = SpecUtil.copyClassAndInstantiate(getEnvironment().getTaskInfo().getTaskName(), "org.apache.flink.runtime.io.network.api.writer.RecordWriterConcrete",
 				getEnvironment().getWriter(syncGateIndex));
 		this.toSyncPartitionId = getEnvironment().getWriter(syncGateIndex).getPartitionId();
 	}

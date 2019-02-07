@@ -52,7 +52,7 @@ public class OutputCollector<T> implements Collector<T> {
 	@SuppressWarnings("unchecked")
 	public OutputCollector(List<RecordWriter<SerializationDelegate<T>>> writers, TypeSerializer<T> serializer) {
 		//this.delegate = new SerializationDelegateConcrete<>(serializer);
-		this.delegate = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.plugable.SerializationDelegateConcrete", serializer);
+		this.delegate = SpecUtil.copyClassAndInstantiate(serializer, "org.apache.flink.runtime.plugable.SerializationDelegateConcrete", serializer);
 		this.writers = (RecordWriter<SerializationDelegate<T>>[]) writers.toArray(new RecordWriter[writers.size()]);
 	}
 

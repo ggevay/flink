@@ -20,7 +20,7 @@ public interface RecordWriter<T extends IOReadableWritable> {
 //					writer, channelSelector, timeout, taskName);
         } else {
             //return new RecordWriterConcrete<>(writer, channelSelector, timeout, taskName);
-			return SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.writer.RecordWriterConcrete",
+			return SpecUtil.copyClassAndInstantiate(taskName, "org.apache.flink.runtime.io.network.api.writer.RecordWriterConcrete",
 					writer, channelSelector, timeout, taskName);
         }
     }

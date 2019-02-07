@@ -1,5 +1,6 @@
 package org.apache.flink.util;
 
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -8,25 +9,55 @@ import org.objectweb.asm.commons.SimpleRemapper;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
 public class SpecUtil {
 
-    private static final Map<String, Integer> copyCounts = new TreeMap<>();
-
     private final static boolean enabled = true;
 
+    private static final Map<String, Integer> copyCounts = new TreeMap<>();
 
-    public static <T> T copyClassAndInstantiate(Class clazz, Object... ctorArgs) {
-        return copyClassAndInstantiate(clazz.getName(), ctorArgs);
+    private static final Map<Tuple2<String, Object>, Class> cache = new HashMap<>();
+
+
+    public static <T> T copyClassAndInstantiateNoCache(Class clazz, Object... ctorArgs) {
+        return copyClassAndInstantiateNoCache(clazz.getName(), ctorArgs);
     }
 
-    public static <T> T copyClassAndInstantiate(String name, Object... ctorArgs) {
+    public static <T> T copyClassAndInstantiateNoCache(String name, Object... ctorArgs) {
+        try {
+            return (T) instantiate(copyClass(name), ctorArgs);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static <T> T copyClassAndInstantiate(Object cacheKey, Class clazz, Object... ctorArgs) {
+        return copyClassAndInstantiate(cacheKey, clazz.getName(), ctorArgs);
+    }
+
+    public static <T> T copyClassAndInstantiate(Object cacheKey, String name, Object... ctorArgs) {
         try {
 
+            Tuple2<String, Object> internalKey = Tuple2.of(name, cacheKey);
+
+            Class clazzToInst;
+            synchronized (SpecUtil.class) {
+                clazzToInst = cache.computeIfAbsent(internalKey, k -> copyClass(k.f0));
+            }
+
+            return (T) instantiate(clazzToInst, ctorArgs);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static <T> Class<T> copyClass(String name) {
+        try {
             if (!enabled) {
-                return (T) instantiate(Class.forName(name), ctorArgs);
+                return (Class) Class.forName(name);
             }
 
             ClassReader reader = new ClassReader(name);
@@ -45,9 +76,7 @@ public class SpecUtil {
 
             reader.accept(visitor, 0);
 
-            Class copied = loadClass(newName, writer.toByteArray());
-
-            return (T) instantiate(copied, ctorArgs);
+            return loadClass(newName, writer.toByteArray());
 
         } catch (Exception e) {
             throw new RuntimeException(e);

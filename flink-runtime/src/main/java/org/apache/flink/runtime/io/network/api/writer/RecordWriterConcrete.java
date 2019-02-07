@@ -102,7 +102,7 @@ public class RecordWriterConcrete<T extends IOReadableWritable> implements Recor
 		this.channelSelector.setup(numberOfChannels);
 
 		//this.serializer = new SpanningRecordSerializer<T>();
-		this.serializer = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.serialization.SpanningRecordSerializer");
+		this.serializer = SpecUtil.copyClassAndInstantiate(taskName, "org.apache.flink.runtime.io.network.api.serialization.SpanningRecordSerializer");
 		this.bufferBuilders = new Optional[numberOfChannels];
 		this.broadcastChannels = new int[numberOfChannels];
 		for (int i = 0; i < numberOfChannels; i++) {

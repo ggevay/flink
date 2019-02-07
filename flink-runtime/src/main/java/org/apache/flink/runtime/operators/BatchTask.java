@@ -246,7 +246,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 		// now get the operator class which drives the operation
 		final Class<? extends Driver<S, OT>> driverClass = this.config.getDriver();
 		//this.driver = InstantiationUtil.instantiate(driverClass, Driver.class);
-		this.driver = SpecUtil.copyClassAndInstantiate(driverClass);
+		this.driver = SpecUtil.copyClassAndInstantiate(getEnvironment().getTaskInfo().getTaskName(), driverClass);
 
 		String headName =  getEnvironment().getTaskInfo().getTaskName().split("->")[0].trim();
 		this.metrics = getEnvironment().getMetricGroup()
@@ -673,7 +673,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 //						getEnvironment().getInputGate(currentReaderOffset),
 //						getEnvironment().getTaskManagerInfo().getTmpDirectories());
 
-				inputReaders[i] = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.reader.MutableRecordReader",
+				inputReaders[i] = SpecUtil.copyClassAndInstantiate(getEnvironment().getTaskInfo().getTaskName(), "org.apache.flink.runtime.io.network.api.reader.MutableRecordReader",
 						getEnvironment().getInputGate(currentReaderOffset),
 						getEnvironment().getTaskManagerInfo().getTmpDirectories());
 
@@ -688,7 +688,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 //						new UnionInputGate(readers),
 //						getEnvironment().getTaskManagerInfo().getTmpDirectories());
 
-				inputReaders[i] = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.reader.MutableRecordReader",
+				inputReaders[i] = SpecUtil.copyClassAndInstantiate(getEnvironment().getTaskInfo().getTaskName(), "org.apache.flink.runtime.io.network.api.reader.MutableRecordReader",
 						new UnionInputGate(readers),
 						getEnvironment().getTaskManagerInfo().getTmpDirectories());
 
@@ -726,7 +726,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 //				broadcastInputReaders[i] = new MutableRecordReader<IOReadableWritable>(
 //						getEnvironment().getInputGate(currentReaderOffset),
 //						getEnvironment().getTaskManagerInfo().getTmpDirectories());
-				broadcastInputReaders[i] = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.reader.MutableRecordReader",
+				broadcastInputReaders[i] = SpecUtil.copyClassAndInstantiate(getEnvironment().getTaskInfo().getTaskName(), "org.apache.flink.runtime.io.network.api.reader.MutableRecordReader",
 						getEnvironment().getInputGate(currentReaderOffset),
 						getEnvironment().getTaskManagerInfo().getTmpDirectories());
 			} else if (groupSize > 1){
@@ -738,7 +738,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 //				broadcastInputReaders[i] = new MutableRecordReader<IOReadableWritable>(
 //						new UnionInputGate(readers),
 //						getEnvironment().getTaskManagerInfo().getTmpDirectories());
-				broadcastInputReaders[i] = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.reader.MutableRecordReader",
+				broadcastInputReaders[i] = SpecUtil.copyClassAndInstantiate(getEnvironment().getTaskInfo().getTaskName(), "org.apache.flink.runtime.io.network.api.reader.MutableRecordReader",
 						new UnionInputGate(readers),
 						getEnvironment().getTaskManagerInfo().getTmpDirectories());
 			} else {
@@ -855,7 +855,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 //				SpillingResettableMutableObjectIterator<?> iter = new SpillingResettableMutableObjectIterator(
 //					getInput(i), this.inputSerializers[i].getSerializer(), getMemoryManager(), getIOManager(), memoryPages, this);
 				SpillingResettableMutableObjectIterator<?> iter = SpecUtil.copyClassAndInstantiate(
-						"org.apache.flink.runtime.operators.resettable.SpillingResettableMutableObjectIteratorConcrete",
+						getEnvironment().getTaskInfo().getTaskName(), "org.apache.flink.runtime.operators.resettable.SpillingResettableMutableObjectIteratorConcrete",
 						getInput(i), this.inputSerializers[i].getSerializer(), getMemoryManager(), getIOManager(), memoryPages, this);
 				this.resettableInputs[i] = iter;
 				this.inputs[i] = iter;
@@ -1022,7 +1022,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 		MutableReader<DeserializationDelegate<?>> reader = (MutableReader<DeserializationDelegate<?>>) inputReader;
 		@SuppressWarnings({ "unchecked", "rawtypes" })
 		//final MutableObjectIterator<?> iter = new ReaderIterator(reader, serializerFactory.getSerializer());
-		final MutableObjectIterator<?> iter = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.operators.util.ReaderIterator",
+		final MutableObjectIterator<?> iter = SpecUtil.copyClassAndInstantiate(getEnvironment().getTaskInfo().getTaskName(), "org.apache.flink.runtime.operators.util.ReaderIterator",
 				reader, serializerFactory.getSerializer());
 		return iter;
 	}
@@ -1259,7 +1259,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 			final ChannelSelector<SerializationDelegate<T>> oe;
 			if (compFactory == null) {
 //				oe = new OutputEmitter<T>(strategy, indexInSubtaskGroup);
-				oe = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.operators.shipping.OutputEmitter",
+				oe = SpecUtil.copyClassAndInstantiate(config.getTaskName(), "org.apache.flink.runtime.operators.shipping.OutputEmitter",
 						strategy, indexInSubtaskGroup);
 			}
 			else {
@@ -1268,7 +1268,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 
 				final TypeComparator<T> comparator = compFactory.createComparator();
 //				oe = new OutputEmitter<T>(strategy, indexInSubtaskGroup, comparator, partitioner, dataDist);
-				oe = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.operators.shipping.OutputEmitter",
+				oe = SpecUtil.copyClassAndInstantiate(config.getTaskName(), "org.apache.flink.runtime.operators.shipping.OutputEmitter",
 						strategy, indexInSubtaskGroup, comparator, partitioner, dataDist);
 			}
 
@@ -1285,7 +1285,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 			eventualOutputs.addAll(writers);
 		}
 //		return new OutputCollector<T>(writers, serializerFactory.getSerializer());
-		return SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.operators.shipping.OutputCollector",
+		return SpecUtil.copyClassAndInstantiate(config.getTaskName(), "org.apache.flink.runtime.operators.shipping.OutputCollector",
 				writers, serializerFactory.getSerializer());
 	}
 

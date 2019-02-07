@@ -37,7 +37,7 @@ public class CopyClass {
 
         //Object copiedInst = copyClassAndInstantiate("org.apache.flink.examples.java.asmexp.TestClass", 5);
 
-        Object copiedInst = SpecUtil.copyClassAndInstantiate("org.apache.flink.examples.java.asmexp.TestClass", 5);
+        Object copiedInst = SpecUtil.copyClassAndInstantiateNoCache("org.apache.flink.examples.java.asmexp.TestClass", 5);
 
         System.out.println(copiedInst.toString());
 
