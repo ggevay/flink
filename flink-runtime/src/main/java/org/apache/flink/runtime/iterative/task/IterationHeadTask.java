@@ -32,6 +32,7 @@ import org.apache.flink.runtime.io.disk.InputViewIterator;
 import org.apache.flink.runtime.io.network.TaskEventDispatcher;
 import org.apache.flink.runtime.io.network.api.EndOfSuperstepEvent;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
+import org.apache.flink.runtime.io.network.api.writer.RecordWriterConcrete;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.iterative.concurrent.BlockingBackChannel;
 import org.apache.flink.runtime.iterative.concurrent.BlockingBackChannelBroker;
@@ -55,6 +56,7 @@ import org.apache.flink.types.Value;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.MutableObjectIterator;
 
+import org.apache.flink.util.SpecUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,7 +144,9 @@ public class IterationHeadTask<X, Y, S extends Function, OT> extends AbstractIte
 			throw new Exception("Error: Inconsistent head task setup - wrong mapping of output gates.");
 		}
 		// now, we can instantiate the sync gate
-		this.toSync = new RecordWriter<IOReadableWritable>(getEnvironment().getWriter(syncGateIndex));
+		//this.toSync = new RecordWriterConcrete<IOReadableWritable>(getEnvironment().getWriter(syncGateIndex));
+		this.toSync = SpecUtil.copyClassAndInstantiate("org.apache.flink.runtime.io.network.api.writer.RecordWriterConcrete",
+				getEnvironment().getWriter(syncGateIndex));
 		this.toSyncPartitionId = getEnvironment().getWriter(syncGateIndex).getPartitionId();
 	}
 

@@ -20,6 +20,7 @@ package org.apache.flink.streaming.runtime.io.benchmark;
 
 import org.apache.flink.core.testutils.CheckedThread;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
+import org.apache.flink.runtime.io.network.api.writer.RecordWriterConcrete;
 import org.apache.flink.types.LongValue;
 
 import java.io.IOException;
@@ -29,7 +30,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
 
 /**
- * Wrapping thread around {@link RecordWriter} that sends a fixed number of <tt>LongValue(0)</tt>
+ * Wrapping thread around {@link RecordWriterConcrete} that sends a fixed number of <tt>LongValue(0)</tt>
  * records.
  */
 public class LongRecordWriterThread extends CheckedThread {

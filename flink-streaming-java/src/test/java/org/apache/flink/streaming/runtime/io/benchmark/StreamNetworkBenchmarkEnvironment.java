@@ -35,6 +35,7 @@ import org.apache.flink.runtime.io.network.ConnectionID;
 import org.apache.flink.runtime.io.network.NetworkEnvironment;
 import org.apache.flink.runtime.io.network.TaskEventDispatcher;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
+import org.apache.flink.runtime.io.network.api.writer.RecordWriterConcrete;
 import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
 import org.apache.flink.runtime.io.network.api.writer.RoundRobinChannelSelector;
 import org.apache.flink.runtime.io.network.buffer.NetworkBufferPool;
@@ -184,7 +185,7 @@ public class StreamNetworkBenchmarkEnvironment<T extends IOReadableWritable> {
 
 	public RecordWriter<T> createRecordWriter(int partitionIndex, long flushTimeout) throws Exception {
 		ResultPartitionWriter sender = createResultPartition(jobId, partitionIds[partitionIndex], senderEnv, channels);
-		return new RecordWriter<>(sender, new RoundRobinChannelSelector<T>(), flushTimeout, null);
+		return new RecordWriterConcrete<>(sender, new RoundRobinChannelSelector<T>(), flushTimeout, null);
 	}
 
 	private void generatePartitionIds() throws Exception {

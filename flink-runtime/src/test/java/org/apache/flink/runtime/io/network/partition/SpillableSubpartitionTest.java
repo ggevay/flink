@@ -27,6 +27,7 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsyncWithNoOpBufferFi
 import org.apache.flink.runtime.io.network.api.CancelCheckpointMarker;
 import org.apache.flink.runtime.io.network.api.EndOfPartitionEvent;
 import org.apache.flink.runtime.io.network.api.serialization.EventSerializer;
+import org.apache.flink.runtime.io.network.api.writer.RecordWriterConcrete;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferBuilder;
 import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
@@ -256,7 +257,7 @@ public class SpillableSubpartitionTest extends SubpartitionTestBase {
 	/**
 	 * Tests that a spilled partition is correctly read back in via a spilled read view. The
 	 * partition went into spilled state before adding buffers and the access pattern resembles
-	 * the actual use of {@link org.apache.flink.runtime.io.network.api.writer.RecordWriter}.
+	 * the actual use of {@link RecordWriterConcrete}.
 	 */
 	@Test
 	public void testConsumeSpilledPartitionSpilledBeforeAdd() throws Exception {

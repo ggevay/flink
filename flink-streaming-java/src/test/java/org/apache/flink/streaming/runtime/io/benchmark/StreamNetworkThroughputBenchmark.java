@@ -19,6 +19,7 @@
 package org.apache.flink.streaming.runtime.io.benchmark;
 
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.io.network.api.writer.RecordWriterConcrete;
 import org.apache.flink.types.LongValue;
 
 import java.util.concurrent.CompletableFuture;
@@ -88,7 +89,7 @@ public class StreamNetworkThroughputBenchmark {
 	 *
 	 * @param recordWriters
 	 * 		number of senders, i.e.
-	 * 		{@link org.apache.flink.runtime.io.network.api.writer.RecordWriter} instances
+	 * 		{@link RecordWriterConcrete} instances
 	 * @param channels
 	 * 		number of outgoing channels / receivers
 	 */

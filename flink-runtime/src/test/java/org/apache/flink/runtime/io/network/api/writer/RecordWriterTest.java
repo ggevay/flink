@@ -77,7 +77,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests for the {@link RecordWriter}.
+ * Tests for the {@link RecordWriterConcrete}.
  */
 public class RecordWriterTest {
 
@@ -130,7 +130,7 @@ public class RecordWriterTest {
 
 			ResultPartitionWriter partitionWriter = new RecyclingPartitionWriter(bufferProvider);
 
-			final RecordWriter<IntValue> recordWriter = new RecordWriter<IntValue>(partitionWriter);
+			final RecordWriter<IntValue> recordWriter = new RecordWriterConcrete<IntValue>(partitionWriter);
 
 			Future<?> result = executor.submit(new Callable<Void>() {
 				@Override
@@ -182,7 +182,7 @@ public class RecordWriterTest {
 		ResultPartitionWriter partitionWriter =
 			spy(new RecyclingPartitionWriter(new TestPooledBufferProvider(1, 16)));
 
-		RecordWriter<IntValue> recordWriter = new RecordWriter<>(partitionWriter);
+		RecordWriter<IntValue> recordWriter = new RecordWriterConcrete<>(partitionWriter);
 
 		// Fill a buffer, but don't write it out.
 		recordWriter.emit(new IntValue(0));
@@ -212,7 +212,7 @@ public class RecordWriterTest {
 		TestPooledBufferProvider bufferProvider = new TestPooledBufferProvider(Integer.MAX_VALUE, bufferSize);
 
 		ResultPartitionWriter partitionWriter = new CollectingPartitionWriter(queues, bufferProvider);
-		RecordWriter<ByteArrayIO> writer = new RecordWriter<>(partitionWriter);
+		RecordWriter<ByteArrayIO> writer = new RecordWriterConcrete<>(partitionWriter);
 		CheckpointBarrier barrier = new CheckpointBarrier(Integer.MAX_VALUE + 919192L, Integer.MAX_VALUE + 18828228L, CheckpointOptions.forCheckpointWithDefaultLocation());
 
 		// No records emitted yet, broadcast should not request a buffer
@@ -249,7 +249,7 @@ public class RecordWriterTest {
 		TestPooledBufferProvider bufferProvider = new TestPooledBufferProvider(Integer.MAX_VALUE, bufferSize);
 
 		ResultPartitionWriter partitionWriter = new CollectingPartitionWriter(queues, bufferProvider);
-		RecordWriter<ByteArrayIO> writer = new RecordWriter<>(partitionWriter);
+		RecordWriter<ByteArrayIO> writer = new RecordWriterConcrete<>(partitionWriter);
 		CheckpointBarrier barrier = new CheckpointBarrier(Integer.MAX_VALUE + 1292L, Integer.MAX_VALUE + 199L, CheckpointOptions.forCheckpointWithDefaultLocation());
 
 		// Emit records on some channels first (requesting buffers), then
@@ -311,7 +311,7 @@ public class RecordWriterTest {
 
 		ResultPartitionWriter partition =
 			new CollectingPartitionWriter(queues, new TestPooledBufferProvider(Integer.MAX_VALUE));
-		RecordWriter<?> writer = new RecordWriter<>(partition);
+		RecordWriter<?> writer = new RecordWriterConcrete<>(partition);
 
 		writer.broadcastEvent(EndOfPartitionEvent.INSTANCE);
 
@@ -344,7 +344,7 @@ public class RecordWriterTest {
 
 		ResultPartitionWriter partition =
 			new CollectingPartitionWriter(queues, new TestPooledBufferProvider(Integer.MAX_VALUE));
-		RecordWriter<?> writer = new RecordWriter<>(partition);
+		RecordWriter<?> writer = new RecordWriterConcrete<>(partition);
 
 		writer.broadcastEvent(EndOfPartitionEvent.INSTANCE);
 
@@ -373,7 +373,7 @@ public class RecordWriterTest {
 
 		ResultPartitionWriter partition =
 			new CollectingPartitionWriter(queues, new TestPooledBufferProvider(Integer.MAX_VALUE));
-		RecordWriter<IntValue> writer = new RecordWriter<>(partition);
+		RecordWriter<IntValue> writer = new RecordWriterConcrete<>(partition);
 
 		writer.broadcastEmit(new IntValue(0));
 		writer.flushAll();
@@ -393,7 +393,7 @@ public class RecordWriterTest {
 
 	/**
 	 * Tests that records are broadcast via {@link ChannelSelector} and
-	 * {@link RecordWriter#emit(IOReadableWritable)}.
+	 * {@link RecordWriterConcrete#emit(IOReadableWritable)}.
 	 */
 	@Test
 	public void testEmitRecordWithBroadcastPartitioner() throws Exception {
@@ -401,7 +401,7 @@ public class RecordWriterTest {
 	}
 
 	/**
-	 * Tests that records are broadcast via {@link RecordWriter#broadcastEmit(IOReadableWritable)}.
+	 * Tests that records are broadcast via {@link RecordWriterConcrete#broadcastEmit(IOReadableWritable)}.
 	 */
 	@Test
 	public void testBroadcastEmitRecord() throws Exception {
@@ -412,7 +412,7 @@ public class RecordWriterTest {
 	 * The results of emitting records via BroadcastPartitioner or broadcasting records directly are the same,
 	 * that is all the target channels can receive the whole outputs.
 	 *
-	 * @param isBroadcastEmit whether using {@link RecordWriter#broadcastEmit(IOReadableWritable)} or not
+	 * @param isBroadcastEmit whether using {@link RecordWriterConcrete#broadcastEmit(IOReadableWritable)} or not
 	 */
 	private void emitRecordWithBroadcastPartitionerOrBroadcastEmitRecord(boolean isBroadcastEmit) throws Exception {
 		final int numberOfChannels = 4;

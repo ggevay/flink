@@ -22,6 +22,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.metrics.Gauge;
 import org.apache.flink.runtime.event.AbstractEvent;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
+import org.apache.flink.runtime.io.network.api.writer.RecordWriterConcrete;
 import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.runtime.plugable.SerializationDelegateConcrete;
 import org.apache.flink.streaming.api.operators.Output;
@@ -41,7 +42,7 @@ import java.io.IOException;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * Implementation of {@link Output} that sends data using a {@link RecordWriter}.
+ * Implementation of {@link Output} that sends data using a {@link RecordWriterConcrete}.
  */
 @Internal
 public class RecordWriterOutput<OUT> implements OperatorChain.WatermarkGaugeExposingOutput<StreamRecord<OUT>> {

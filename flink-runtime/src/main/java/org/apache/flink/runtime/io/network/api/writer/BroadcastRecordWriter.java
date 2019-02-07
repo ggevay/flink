@@ -25,12 +25,12 @@ import java.io.IOException;
 /**
  * A special record-oriented runtime result writer only for broadcast mode.
  *
- * <p>The BroadcastRecordWriter extends the {@link RecordWriter} and handles {@link #emit(IOReadableWritable)}
+ * <p>The BroadcastRecordWriter extends the {@link RecordWriterConcrete} and handles {@link #emit(IOReadableWritable)}
  * operation via {@link #broadcastEmit(IOReadableWritable)} directly in a more efficient way.
  *
  * @param <T> the type of the record that can be emitted with this record writer
  */
-public class BroadcastRecordWriter<T extends IOReadableWritable> extends RecordWriter<T> {
+public class BroadcastRecordWriter<T extends IOReadableWritable> extends RecordWriterConcrete<T> {
 
 	public BroadcastRecordWriter(
 			ResultPartitionWriter writer,

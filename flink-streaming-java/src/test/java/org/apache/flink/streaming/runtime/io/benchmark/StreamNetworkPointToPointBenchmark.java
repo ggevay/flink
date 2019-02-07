@@ -20,6 +20,7 @@ package org.apache.flink.streaming.runtime.io.benchmark;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
+import org.apache.flink.runtime.io.network.api.writer.RecordWriterConcrete;
 import org.apache.flink.types.LongValue;
 
 import java.util.concurrent.CompletableFuture;
@@ -42,7 +43,7 @@ public class StreamNetworkPointToPointBenchmark {
 	 * @param records
 	 * 		records to pass through the network stack
 	 * @param flushAfterLastEmit
-	 * 		whether to flush the {@link RecordWriter} after the last record
+	 * 		whether to flush the {@link RecordWriterConcrete} after the last record
 	 */
 	public void executeBenchmark(long records, boolean flushAfterLastEmit) throws Exception {
 		final LongValue value = new LongValue();
@@ -71,7 +72,7 @@ public class StreamNetworkPointToPointBenchmark {
 	 *
 	 * @param flushTimeout
 	 * 		output flushing interval of the
-	 * 		{@link org.apache.flink.runtime.io.network.api.writer.RecordWriter}'s output flusher thread
+	 * 		{@link RecordWriterConcrete}'s output flusher thread
 	 */
 	public void setUp(long flushTimeout, Configuration config) throws Exception {
 		environment = new StreamNetworkBenchmarkEnvironment<>();

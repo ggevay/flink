@@ -31,6 +31,7 @@ import org.apache.flink.metrics.SimpleCounter;
 import org.apache.flink.runtime.execution.CancelTaskException;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
+import org.apache.flink.runtime.io.network.api.writer.RecordWriterConcrete;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProvider;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProviderException;
@@ -306,8 +307,8 @@ public class DataSourceTask<OT> extends AbstractInvokable {
 	 * The output collector applies the configured shipping strategy.
 	 */
 	private void initOutputs(ClassLoader cl) throws Exception {
-		this.chainedTasks = new ArrayList<ChainedDriver<?, ?>>();
-		this.eventualOutputs = new ArrayList<RecordWriter<?>>();
+		this.chainedTasks = new ArrayList<>();
+		this.eventualOutputs = new ArrayList<>();
 
 		this.output = BatchTask.initOutputs(this, cl, this.config, this.chainedTasks, this.eventualOutputs,
 				getExecutionConfig(), getEnvironment().getAccumulatorRegistry().getUserMap());

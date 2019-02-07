@@ -45,7 +45,6 @@ import org.apache.flink.runtime.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.runtime.operators.chaining.ChainedDriver;
 import org.apache.flink.runtime.operators.chaining.ExceptionInChainedStubException;
 import org.apache.flink.runtime.operators.resettable.SpillingResettableMutableObjectIterator;
-import org.apache.flink.runtime.operators.resettable.SpillingResettableMutableObjectIteratorConcrete;
 import org.apache.flink.runtime.operators.shipping.ShipStrategyType;
 import org.apache.flink.runtime.operators.sort.CombiningUnilateralSortMerger;
 import org.apache.flink.runtime.operators.sort.UnilateralSortMerger;
@@ -1037,8 +1036,8 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 	 * The output collector applies the configured shipping strategies for each writer.
 	 */
 	protected void initOutputs() throws Exception {
-		this.chainedTasks = new ArrayList<ChainedDriver<?, ?>>();
-		this.eventualOutputs = new ArrayList<RecordWriter<?>>();
+		this.chainedTasks = new ArrayList<>();
+		this.eventualOutputs = new ArrayList<>();
 
 		ClassLoader userCodeClassLoader = getUserCodeClassLoader();
 
