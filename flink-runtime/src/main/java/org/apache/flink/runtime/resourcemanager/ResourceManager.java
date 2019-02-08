@@ -1131,16 +1131,16 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 
 		@Override
 		public void notifyHeartbeatTimeout(final ResourceID resourceID) {
-			runAsync(new Runnable() {
-				@Override
-				public void run() {
-					log.info("The heartbeat of TaskManager with id {} timed out.", resourceID);
-
-					closeTaskManagerConnection(
-							resourceID,
-							new TimeoutException("The heartbeat of TaskManager with id " + resourceID + "  timed out."));
-				}
-			});
+//			runAsync(new Runnable() {
+//				@Override
+//				public void run() {
+//					log.info("The heartbeat of TaskManager with id {} timed out.", resourceID);
+//
+//					closeTaskManagerConnection(
+//							resourceID,
+//							new TimeoutException("The heartbeat of TaskManager with id " + resourceID + "  timed out."));
+//				}
+//			});
 		}
 
 		@Override
