@@ -24,6 +24,7 @@ import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.operators.resettable.SpillingResettableMutableObjectIteratorConcrete;
 import org.apache.flink.runtime.operators.util.metrics.CountingCollector;
 import org.apache.flink.runtime.operators.util.metrics.CountingMutableObjectIterator;
+import org.apache.flink.util.SpecUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.flink.api.common.functions.CrossFunction;
@@ -220,7 +221,9 @@ public class CrossDriver<T1, T2, OT> implements Driver<CrossFunction<T1, T2, OT>
 		
 
 		final CrossFunction<T1, T2, OT> crosser = this.taskContext.getStub();
-		final Collector<OT> collector = new CountingCollector<>(this.taskContext.getOutputCollector(), numRecordsOut);
+		final Collector<OT> collector = SpecUtil.copyClassAndInstantiate(this.taskContext.getTaskConfig().getTaskName(),
+                "org.apache.flink.runtime.operators.util.metrics.CountingCollector",
+                this.taskContext.getOutputCollector(), numRecordsOut);
 
 
 		if (objectReuseEnabled) {
@@ -287,7 +290,9 @@ public class CrossDriver<T1, T2, OT> implements Driver<CrossFunction<T1, T2, OT>
 		this.blockIter = blockVals;
 		
 		final CrossFunction<T1, T2, OT> crosser = this.taskContext.getStub();
-		final Collector<OT> collector = new CountingCollector<>(this.taskContext.getOutputCollector(), numRecordsOut);
+		final Collector<OT> collector = SpecUtil.copyClassAndInstantiate(this.taskContext.getTaskConfig().getTaskName(),
+                "org.apache.flink.runtime.operators.util.metrics.CountingCollector",
+                this.taskContext.getOutputCollector(), numRecordsOut);
 
 		if (objectReuseEnabled) {
 			final T1 val1Reuse = serializer1.createInstance();
@@ -348,7 +353,9 @@ public class CrossDriver<T1, T2, OT> implements Driver<CrossFunction<T1, T2, OT>
 		this.spillIter = spillVals;
 		
 		final CrossFunction<T1, T2, OT> crosser = this.taskContext.getStub();
-		final Collector<OT> collector = new CountingCollector<>(this.taskContext.getOutputCollector(), numRecordsOut);
+		final Collector<OT> collector = SpecUtil.copyClassAndInstantiate(this.taskContext.getTaskConfig().getTaskName(),
+                "org.apache.flink.runtime.operators.util.metrics.CountingCollector",
+                this.taskContext.getOutputCollector(), numRecordsOut);
 
 		if (objectReuseEnabled) {
 			final T1 val1Reuse = serializer1.createInstance();
@@ -401,7 +408,9 @@ public class CrossDriver<T1, T2, OT> implements Driver<CrossFunction<T1, T2, OT>
 		this.spillIter = spillVals;
 
 		final CrossFunction<T1, T2, OT> crosser = this.taskContext.getStub();
-		final Collector<OT> collector = new CountingCollector<>(this.taskContext.getOutputCollector(), numRecordsOut);
+		final Collector<OT> collector = SpecUtil.copyClassAndInstantiate(this.taskContext.getTaskConfig().getTaskName(),
+                "org.apache.flink.runtime.operators.util.metrics.CountingCollector",
+                this.taskContext.getOutputCollector(), numRecordsOut);
 
 		if (objectReuseEnabled) {
 			final T1 val1Reuse = serializer1.createInstance();

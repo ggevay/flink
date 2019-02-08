@@ -24,6 +24,7 @@ import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.operators.util.metrics.CountingCollector;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.MutableObjectIterator;
+import org.apache.flink.util.SpecUtil;
 
 /**
  * Map task which is executed by a Task Manager. The task has a single
@@ -85,7 +86,9 @@ public class MapDriver<IT, OT> implements Driver<MapFunction<IT, OT>, OT> {
 		// cache references on the stack
 		final MutableObjectIterator<IT> input = this.taskContext.getInput(0);
 		final MapFunction<IT, OT> function = this.taskContext.getStub();
-		final Collector<OT> output = new CountingCollector<>(this.taskContext.getOutputCollector(), numRecordsOut);
+		final Collector<OT> output = SpecUtil.copyClassAndInstantiate(this.taskContext.getTaskConfig().getTaskName(),
+                "org.apache.flink.runtime.operators.util.metrics.CountingCollector",
+                this.taskContext.getOutputCollector(), numRecordsOut);
 
 		if (objectReuseEnabled) {
 			IT record = this.taskContext.<IT>getInputSerializer(0).getSerializer().createInstance();

@@ -24,6 +24,7 @@ import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.operators.sort.NonReusingSortMergeCoGroupIterator;
 import org.apache.flink.runtime.operators.util.metrics.CountingCollector;
 import org.apache.flink.runtime.operators.util.metrics.CountingMutableObjectIterator;
+import org.apache.flink.util.SpecUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.flink.api.common.functions.CoGroupFunction;
@@ -152,7 +153,9 @@ public class CoGroupDriver<IT1, IT2, OT> implements Driver<CoGroupFunction<IT1, 
 		final Counter numRecordsOut = this.taskContext.getMetricGroup().getIOMetricGroup().getNumRecordsOutCounter();
 
 		final CoGroupFunction<IT1, IT2, OT> coGroupStub = this.taskContext.getStub();
-		final Collector<OT> collector = new CountingCollector<>(this.taskContext.getOutputCollector(), numRecordsOut);
+		final Collector<OT> collector = SpecUtil.copyClassAndInstantiate(this.taskContext.getTaskConfig().getTaskName(),
+                "org.apache.flink.runtime.operators.util.metrics.CountingCollector",
+                this.taskContext.getOutputCollector(), numRecordsOut);
 		final CoGroupTaskIterator<IT1, IT2> coGroupIterator = this.coGroupIterator;
 		
 		while (this.running && coGroupIterator.next()) {

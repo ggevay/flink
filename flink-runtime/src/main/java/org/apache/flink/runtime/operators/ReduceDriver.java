@@ -22,6 +22,7 @@ package org.apache.flink.runtime.operators;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.operators.util.metrics.CountingCollector;
+import org.apache.flink.util.SpecUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.flink.api.common.functions.ReduceFunction;
@@ -118,7 +119,9 @@ public class ReduceDriver<T> implements Driver<ReduceFunction<T>, T> {
 		
 		final ReduceFunction<T> function = this.taskContext.getStub();
 		
-		final Collector<T> output = new CountingCollector<>(this.taskContext.getOutputCollector(), numRecordsOut);
+		final Collector<T> output = SpecUtil.copyClassAndInstantiate(this.taskContext.getTaskConfig().getTaskName(),
+                "org.apache.flink.runtime.operators.util.metrics.CountingCollector",
+                this.taskContext.getOutputCollector(), numRecordsOut);
 
 		if (objectReuseEnabled) {
 			// We only need two objects. The first reference stores results and is

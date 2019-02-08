@@ -36,6 +36,7 @@ import org.apache.flink.runtime.operators.util.metrics.CountingCollector;
 import org.apache.flink.runtime.operators.util.metrics.CountingMutableObjectIterator;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.MutableObjectIterator;
+import org.apache.flink.util.SpecUtil;
 
 public abstract class AbstractCachedBuildSideJoinDriver<IT1, IT2, OT> extends JoinDriver<IT1, IT2, OT> implements ResettableDriver<FlatJoinFunction<IT1, IT2, OT>, OT> {
 
@@ -170,7 +171,9 @@ public abstract class AbstractCachedBuildSideJoinDriver<IT1, IT2, OT> extends Jo
 	public void run() throws Exception {
 		final Counter numRecordsOut = taskContext.getMetricGroup().getIOMetricGroup().getNumRecordsOutCounter();
 		final FlatJoinFunction<IT1, IT2, OT> matchStub = this.taskContext.getStub();
-		final Collector<OT> collector = new CountingCollector<>(this.taskContext.getOutputCollector(), numRecordsOut);
+		final Collector<OT> collector = SpecUtil.copyClassAndInstantiate(this.taskContext.getTaskConfig().getTaskName(),
+                "org.apache.flink.runtime.operators.util.metrics.CountingCollector",
+                this.taskContext.getOutputCollector(), numRecordsOut);
 		
 		while (this.running && matchIterator != null && matchIterator.callWithNextKey(matchStub, collector)) {
 		}

@@ -32,6 +32,7 @@ import org.apache.flink.runtime.operators.util.DistributedRuntimeUDFContext;
 import org.apache.flink.runtime.operators.util.TaskConfig;
 import org.apache.flink.runtime.operators.util.metrics.CountingCollector;
 import org.apache.flink.util.Collector;
+import org.apache.flink.util.SpecUtil;
 
 import java.util.Map;
 
@@ -72,7 +73,9 @@ public abstract class ChainedDriver<IT, OT> implements Collector<IT> {
 		this.metrics = parent.getEnvironment().getMetricGroup().getOrAddOperator(taskName);
 		this.numRecordsIn = this.metrics.getIOMetricGroup().getNumRecordsInCounter();
 		this.numRecordsOut = this.metrics.getIOMetricGroup().getNumRecordsOutCounter();
-		this.outputCollector = new CountingCollector<>(outputCollector, numRecordsOut);
+		this.outputCollector = SpecUtil.copyClassAndInstantiate(config.getTaskName(),
+                "org.apache.flink.runtime.operators.util.metrics.CountingCollector",
+                outputCollector, numRecordsOut);
 
 		Environment env = parent.getEnvironment();
 
@@ -115,7 +118,9 @@ public abstract class ChainedDriver<IT, OT> implements Collector<IT> {
 
 	@SuppressWarnings("unchecked")
 	public void setOutputCollector(Collector<?> outputCollector) {
-		this.outputCollector = new CountingCollector<>((Collector<OT>) outputCollector, numRecordsOut);
+		this.outputCollector = SpecUtil.copyClassAndInstantiate(config.getTaskName(),
+                "org.apache.flink.runtime.operators.util.metrics.CountingCollector",
+                outputCollector, numRecordsOut);
 	}
 
 	public Collector<OT> getOutputCollector() {

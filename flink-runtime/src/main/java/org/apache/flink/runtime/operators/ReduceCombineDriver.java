@@ -27,6 +27,7 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.operators.util.metrics.CountingCollector;
 import org.apache.flink.runtime.operators.hash.InPlaceMutableHashTable;
+import org.apache.flink.util.SpecUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.flink.api.common.functions.ReduceFunction;
@@ -120,7 +121,9 @@ public class ReduceCombineDriver<T> implements Driver<ReduceFunction<T>, T> {
 		comparator = taskContext.getDriverComparator(0);
 		serializer = serializerFactory.getSerializer();
 		reducer = taskContext.getStub();
-		output = new CountingCollector<>(this.taskContext.getOutputCollector(), numRecordsOut);
+		output = SpecUtil.copyClassAndInstantiate(this.taskContext.getTaskConfig().getTaskName(),
+                "org.apache.flink.runtime.operators.util.metrics.CountingCollector",
+                this.taskContext.getOutputCollector(), numRecordsOut);
 
 		MemoryManager memManager = taskContext.getMemoryManager();
 		final int numMemoryPages = memManager.computeNumberOfPages(
