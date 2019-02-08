@@ -1616,21 +1616,21 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
 		@Override
 		public void notifyHeartbeatTimeout(final ResourceID resourceID) {
-			runAsync(() -> {
-				log.info("The heartbeat of JobManager with id {} timed out.", resourceID);
-
-				if (jobManagerConnections.containsKey(resourceID)) {
-					JobManagerConnection jobManagerConnection = jobManagerConnections.get(resourceID);
-
-					if (jobManagerConnection != null) {
-						closeJobManagerConnection(
-							jobManagerConnection.getJobID(),
-							new TimeoutException("The heartbeat of JobManager with id " + resourceID + " timed out."));
-
-						jobLeaderService.reconnect(jobManagerConnection.getJobID());
-					}
-				}
-			});
+//			runAsync(() -> {
+//				log.info("The heartbeat of JobManager with id {} timed out.", resourceID);
+//
+//				if (jobManagerConnections.containsKey(resourceID)) {
+//					JobManagerConnection jobManagerConnection = jobManagerConnections.get(resourceID);
+//
+//					if (jobManagerConnection != null) {
+//						closeJobManagerConnection(
+//							jobManagerConnection.getJobID(),
+//							new TimeoutException("The heartbeat of JobManager with id " + resourceID + " timed out."));
+//
+//						jobLeaderService.reconnect(jobManagerConnection.getJobID());
+//					}
+//				}
+//			});
 		}
 
 		@Override
