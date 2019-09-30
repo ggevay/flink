@@ -18,6 +18,7 @@
 
 package org.apache.flink.examples.scala.graph
 
+import org.apache.flink.api.java.io.DiscardingOutputFormat
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.api.scala._
 import org.apache.flink.examples.java.graph.util.ConnectedComponentsData
@@ -112,7 +113,9 @@ object ConnectedComponents {
       env.execute("Scala Connected Components Example")
     } else {
       println("Printing result to stdout. Use --output to specify output path.")
-      verticesWithComponents.print()
+      //verticesWithComponents.print()
+      verticesWithComponents.output(new DiscardingOutputFormat[(Long, Long)])
+      println(env.getExecutionPlan())
     }
 
   }

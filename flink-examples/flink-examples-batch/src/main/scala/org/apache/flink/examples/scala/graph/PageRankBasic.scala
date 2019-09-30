@@ -18,9 +18,9 @@
 package org.apache.flink.examples.scala.graph
 
 import java.lang.Iterable
-
 import org.apache.flink.api.common.functions.GroupReduceFunction
 import org.apache.flink.api.java.aggregation.Aggregations.SUM
+import org.apache.flink.api.java.io.DiscardingOutputFormat
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.api.scala._
 import org.apache.flink.examples.java.graph.util.PageRankData
@@ -135,7 +135,9 @@ object PageRankBasic {
       env.execute("Basic PageRank Example")
     } else {
       println("Printing result to stdout. Use --output to specify output path.")
-      result.print()
+      //result.print()
+      result.output(new DiscardingOutputFormat[Page])
+      println(env.getExecutionPlan())
     }
   }
 

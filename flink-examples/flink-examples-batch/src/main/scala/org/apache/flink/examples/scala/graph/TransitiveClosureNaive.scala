@@ -18,6 +18,7 @@
 
 package org.apache.flink.examples.scala.graph
 
+import org.apache.flink.api.common.functions.FlatJoinFunction
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.api.scala._
 import org.apache.flink.examples.java.graph.util.ConnectedComponentsData
@@ -60,24 +61,44 @@ object TransitiveClosureNaive {
         .where(1).equalTo(0) {
           (left, right) => (left._1,right._2)
         }.withForwardedFieldsFirst("_1").withForwardedFieldsSecond("_2")
-        .union(prevPaths)
-        .groupBy(0, 1)
-        .reduce((l, r) => l).withForwardedFields("_1; _2")
+        //.union(prevPaths)
+        .distinct()
 
       val terminate = prevPaths
         .coGroup(nextPaths)
-        .where(0).equalTo(0) {
-          (
-            prev: Iterator[(Long, Long)],
-            next: Iterator[(Long, Long)],
-            out: Collector[(Long, Long)]) => {
-              val prevPaths = prev.toSet
-              for (n <- next)
-                if (!prevPaths.contains(n)) out.collect(n)
-            }
-      }.withForwardedFieldsSecond("*")
+        .where(0,1).equalTo(0,1) {
+        (
+          prev: Iterator[(Long, Long)],
+          next: Iterator[(Long, Long)],
+          out: Collector[Int]) => {
+          if (prev.isEmpty)
+            out.collect(0)
+        }
+      }
+
       (nextPaths, terminate)
     }
+
+//    val paths = edges.iterateDelta(edges, maxIterations, Array(0,1)) { (solSet: DataSet[(Long, Long)], workSet: DataSet[(Long, Long)]) =>
+//
+//      val newEdges = workSet
+//        .join(edges)
+//        .where(1).equalTo(0) {
+//        (left, right) => (left._1,right._2)
+//      }.withForwardedFieldsFirst("_1").withForwardedFieldsSecond("_2")
+//
+//      val newEdgesReduced = newEdges.join(solSet).where(0,1).equalTo(0,1)
+//        .apply(new FlatJoinFunction[(Long, Long), (Long, Long), (Long, Long)] {
+//          override def join(first: (Long, Long), second: (Long, Long), out: Collector[(Long, Long)]): Unit = {
+//            if (second == null)
+//              out.collect(first)
+//          }
+//        })
+//
+//      (newEdgesReduced, newEdgesReduced)
+//    }
+
+
 
     if (params.has("output")) {
       paths.writeAsCsv(params.get("output"), "\n", " ")
