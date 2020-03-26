@@ -59,6 +59,20 @@ public class WordCount {
 		// make parameters available in the web interface
 		env.getConfig().setGlobalJobParameters(params);
 
+		// --------------------------------------------------------
+		int parallelism = env.getParallelism();
+		env.fromCollection(Arrays.asList(new Integer[parallelism])).rebalance().map(new MapFunction<Integer, Object>() {
+			@Override
+			public Object map(Integer value) throws Exception {
+				System.gc();
+				return null;
+			}
+		}).output(new DiscardingOutputFormat<>());
+		System.out.println(env.getExecutionPlan());
+		env.execute();
+		// --------------------------------------------------------
+
+
 		// get input data
 		DataSet<String> text;
 		if (params.has("input")) {
