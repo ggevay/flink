@@ -137,6 +137,15 @@ public final class RowSerializer extends TypeSerializer<Row> {
 	@Override
 	public int getLength() {
 		return -1;
+
+//		int l = 0;
+//		for (TypeSerializer fs: fieldSerializers) {
+//			l += fs.getLength();
+//			l++; // because of the null mask
+//			if (fs.getLength() == -1)
+//				throw new RuntimeException();
+//		}
+//		return l;
 	}
 
 	public int getArity() {
