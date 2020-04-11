@@ -24,6 +24,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.datalog.BatchDatalogEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
+import org.apache.flink.types.IntValue;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -45,6 +46,7 @@ public class TransitiveClosure {
         Configuration conf = new Configuration();
         conf.setString("taskmanager.memory.managed.size","8g");
         conf.setString("taskmanager.numberOfTaskSlots","6");
+        conf.setBoolean("pipeline.object-reuse",true);
         ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment(conf);
 
         EnvironmentSettings settings = EnvironmentSettings
@@ -53,11 +55,11 @@ public class TransitiveClosure {
                 .inBatchMode()
                 .build();
         BatchDatalogEnvironment datalogEnv = BatchDatalogEnvironment.create(env, settings);
-        DataSet<Tuple2<String, String>> dataSet = env.readCsvFile(testFilePath).fieldDelimiter(",").types(String.class, String.class);
+        DataSet<Tuple2<IntValue, IntValue>> dataSet = env.readCsvFile(testFilePath).fieldDelimiter(",").types(IntValue.class, IntValue.class);
 
         datalogEnv.registerDataSet("graph", dataSet, "v1,v2");
         Table queryResult = datalogEnv.datalogQuery(inputProgram, query);
-        DataSet<Tuple2<String, String>> resultDS = datalogEnv.toDataSet(queryResult, dataSet.getType());
+        DataSet<Tuple2<IntValue, IntValue>> resultDS = datalogEnv.toDataSet(queryResult, dataSet.getType());
 
         long start = System.currentTimeMillis();
 
