@@ -20,6 +20,7 @@ package org.apache.flink.datalog.examples;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.datalog.BatchDatalogEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
@@ -40,7 +41,12 @@ public class TransitiveClosure {
                         + "tc(X,Y) :- tc(X,Z),graph(Z,Y).\n";
         String query = "tc(X,Y)?";
 
-        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+        //ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+        Configuration conf = new Configuration();
+        conf.setString("taskmanager.memory.managed.size","8g");
+        conf.setString("taskmanager.numberOfTaskSlots","6");
+        ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment(conf);
+
         EnvironmentSettings settings = EnvironmentSettings
                 .newInstance()
                 .useDatalogPlanner()
@@ -53,8 +59,14 @@ public class TransitiveClosure {
         Table queryResult = datalogEnv.datalogQuery(inputProgram, query);
         DataSet<Tuple2<String, String>> resultDS = datalogEnv.toDataSet(queryResult, dataSet.getType());
 
+        long start = System.currentTimeMillis();
+
 //        resultDS.writeAsCsv(testFilePath+"_output");
         System.out.println(resultDS.count());
+
+        long finish = System.currentTimeMillis();
+        long timeElapsed = finish - start;
+        System.out.println("Time: " + (double)timeElapsed/1000);
 
     }
 }
