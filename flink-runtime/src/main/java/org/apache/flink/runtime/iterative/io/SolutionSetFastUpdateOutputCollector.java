@@ -18,7 +18,7 @@
 
 package org.apache.flink.runtime.iterative.io;
 
-import org.apache.flink.runtime.operators.hash.CompactingHashTable;
+import org.apache.flink.runtime.operators.hash.InPlaceMutableHashTable;
 import org.apache.flink.util.Collector;
 
 import java.io.IOException;
@@ -36,13 +36,13 @@ public class SolutionSetFastUpdateOutputCollector<T> implements Collector<T> {
 
 	private final Collector<T> delegate;
 
-	private final CompactingHashTable<T> solutionSet;
+	private final InPlaceMutableHashTable<T> solutionSet;
 
-	public SolutionSetFastUpdateOutputCollector(CompactingHashTable<T> solutionSet) {
+	public SolutionSetFastUpdateOutputCollector(InPlaceMutableHashTable<T> solutionSet) {
 		this(solutionSet, null);
 	}
 
-	public SolutionSetFastUpdateOutputCollector(CompactingHashTable<T> solutionSet, Collector<T> delegate) {
+	public SolutionSetFastUpdateOutputCollector(InPlaceMutableHashTable<T> solutionSet, Collector<T> delegate) {
 		this.solutionSet = solutionSet;
 		this.delegate = delegate;
 	}

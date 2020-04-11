@@ -28,7 +28,7 @@ import org.apache.flink.api.common.typeutils.TypePairComparatorFactory;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.iterative.concurrent.SolutionSetBroker;
 import org.apache.flink.runtime.iterative.task.AbstractIterativeTask;
-import org.apache.flink.runtime.operators.hash.CompactingHashTable;
+import org.apache.flink.runtime.operators.hash.InPlaceMutableHashTable;
 import org.apache.flink.runtime.operators.util.TaskConfig;
 import org.apache.flink.runtime.util.EmptyIterator;
 import org.apache.flink.runtime.util.NonReusingKeyGroupedIterator;
@@ -40,7 +40,7 @@ public class CoGroupWithSolutionSetSecondDriver<IT1, IT2, OT> implements Resetta
 	
 	private TaskContext<CoGroupFunction<IT1, IT2, OT>, OT> taskContext;
 	
-	private CompactingHashTable<IT2> hashTable;
+	private InPlaceMutableHashTable<IT2> hashTable;
 	
 	private JoinHashMap<IT2> objectMap;
 	
@@ -109,8 +109,8 @@ public class CoGroupWithSolutionSetSecondDriver<IT1, IT2, OT> implements Resetta
 			String identifier = iterativeTaskContext.brokerKey();
 			Object table = SolutionSetBroker.instance().get(identifier);
 			
-			if (table instanceof CompactingHashTable) {
-				this.hashTable = (CompactingHashTable<IT2>) table;
+			if (table instanceof InPlaceMutableHashTable) {
+				this.hashTable = (InPlaceMutableHashTable<IT2>) table;
 				solutionSetSerializer = this.hashTable.getBuildSideSerializer();
 				solutionSetComparator = this.hashTable.getBuildSideComparator().duplicate();
 			}
@@ -166,8 +166,8 @@ public class CoGroupWithSolutionSetSecondDriver<IT1, IT2, OT> implements Resetta
 			final ReusingKeyGroupedIterator<IT1> probeSideInput = new ReusingKeyGroupedIterator<IT1>(taskContext.<IT1>getInput(0), probeSideSerializer, probeSideComparator);
 
 			if (this.hashTable != null) {
-				final CompactingHashTable<IT2> join = hashTable;
-				final CompactingHashTable<IT2>.HashTableProber<IT1> prober = join.getProber(this.probeSideComparator, this.pairComparator);
+				final InPlaceMutableHashTable<IT2> join = hashTable;
+				final InPlaceMutableHashTable<IT2>.HashTableProber<IT1> prober = join.getProber(this.probeSideComparator, this.pairComparator);
 
 				IT2 buildSideRecord = solutionSideRecord;
 
@@ -204,8 +204,8 @@ public class CoGroupWithSolutionSetSecondDriver<IT1, IT2, OT> implements Resetta
 					new NonReusingKeyGroupedIterator<IT1>(taskContext.<IT1>getInput(0), probeSideComparator);
 
 			if (this.hashTable != null) {
-				final CompactingHashTable<IT2> join = hashTable;
-				final CompactingHashTable<IT2>.HashTableProber<IT1> prober = join.getProber(this.probeSideComparator, this.pairComparator);
+				final InPlaceMutableHashTable<IT2> join = hashTable;
+				final InPlaceMutableHashTable<IT2>.HashTableProber<IT1> prober = join.getProber(this.probeSideComparator, this.pairComparator);
 
 				IT2 buildSideRecord;
 

@@ -45,7 +45,7 @@ import org.apache.flink.runtime.iterative.io.WorksetUpdateOutputCollector;
 import org.apache.flink.runtime.operators.BatchTask;
 import org.apache.flink.runtime.operators.Driver;
 import org.apache.flink.runtime.operators.ResettableDriver;
-import org.apache.flink.runtime.operators.hash.CompactingHashTable;
+import org.apache.flink.runtime.operators.hash.InPlaceMutableHashTable;
 import org.apache.flink.runtime.operators.util.DistributedRuntimeUDFContext;
 import org.apache.flink.runtime.operators.util.TaskConfig;
 import org.apache.flink.types.Value;
@@ -342,9 +342,9 @@ public abstract class AbstractIterativeTask<S extends Function, OT> extends Batc
 		Broker<Object> solutionSetBroker = SolutionSetBroker.instance();
 
 		Object ss = solutionSetBroker.get(brokerKey());
-		if (ss instanceof CompactingHashTable) {
+		if (ss instanceof InPlaceMutableHashTable) {
 			@SuppressWarnings("unchecked")
-			CompactingHashTable<OT> solutionSet = (CompactingHashTable<OT>) ss;
+			InPlaceMutableHashTable<OT> solutionSet = (InPlaceMutableHashTable<OT>) ss;
 			return new SolutionSetUpdateOutputCollector<OT>(solutionSet, delegate);
 		}
 		else if (ss instanceof JoinHashMap) {

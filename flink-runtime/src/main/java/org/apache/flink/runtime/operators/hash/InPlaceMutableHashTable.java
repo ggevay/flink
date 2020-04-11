@@ -400,6 +400,16 @@ public class InPlaceMutableHashTable<T> extends AbstractMutableHashTable<T> {
 		resizeTableIfNecessary();
 	}
 
+	// Copied from CompactingHashTable
+	public void buildTableWithUniqueKey(final MutableObjectIterator<T> input) throws IOException {
+		// go over the complete input and insert every element into the hash table
+
+		T value;
+		while (!this.closed && (value = input.next()) != null) {
+			insertOrReplaceRecord(value);
+		}
+	}
+
 	private void resizeTableIfNecessary() throws IOException {
 		if (enableResize && numElements > numBuckets) {
 			final long newNumBucketSegments = 2L * bucketSegments.length;

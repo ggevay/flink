@@ -28,7 +28,7 @@ import org.apache.flink.api.common.typeutils.TypePairComparatorFactory;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.iterative.concurrent.SolutionSetBroker;
 import org.apache.flink.runtime.iterative.task.AbstractIterativeTask;
-import org.apache.flink.runtime.operators.hash.CompactingHashTable;
+import org.apache.flink.runtime.operators.hash.InPlaceMutableHashTable;
 import org.apache.flink.runtime.operators.util.TaskConfig;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.MutableObjectIterator;
@@ -37,7 +37,7 @@ public class JoinWithSolutionSetFirstDriver<IT1, IT2, OT> implements ResettableD
 	
 	private TaskContext<FlatJoinFunction<IT1, IT2, OT>, OT> taskContext;
 	
-	private CompactingHashTable<IT1> hashTable;
+	private InPlaceMutableHashTable<IT1> hashTable;
 	
 	private JoinHashMap<IT1> objectMap;
 	
@@ -104,8 +104,8 @@ public class JoinWithSolutionSetFirstDriver<IT1, IT2, OT> implements ResettableD
 			String identifier = iterativeTaskContext.brokerKey();
 			
 			Object table = SolutionSetBroker.instance().get(identifier);
-			if (table instanceof CompactingHashTable) {
-				this.hashTable = (CompactingHashTable<IT1>) table;
+			if (table instanceof InPlaceMutableHashTable) {
+				this.hashTable = (InPlaceMutableHashTable<IT1>) table;
 				solutionSetSerializer = this.hashTable.getBuildSideSerializer();
 				solutionSetComparator = this.hashTable.getBuildSideComparator().duplicate();
 			}
@@ -159,8 +159,8 @@ public class JoinWithSolutionSetFirstDriver<IT1, IT2, OT> implements ResettableD
 			IT2 probeSideRecord = this.probeSideRecord;
 
 			if (hashTable != null) {
-				final CompactingHashTable<IT1> join = hashTable;
-				final CompactingHashTable<IT1>.HashTableProber<IT2> prober = join.getProber(probeSideComparator, pairComparator);
+				final InPlaceMutableHashTable<IT1> join = hashTable;
+				final InPlaceMutableHashTable<IT1>.HashTableProber<IT2> prober = join.getProber(probeSideComparator, pairComparator);
 
 
 				IT1 buildSideRecord = this.solutionSideRecord;
@@ -185,8 +185,8 @@ public class JoinWithSolutionSetFirstDriver<IT1, IT2, OT> implements ResettableD
 			IT2 probeSideRecord;
 
 			if (hashTable != null) {
-				final CompactingHashTable<IT1> join = hashTable;
-				final CompactingHashTable<IT1>.HashTableProber<IT2> prober = join.getProber(probeSideComparator, pairComparator);
+				final InPlaceMutableHashTable<IT1> join = hashTable;
+				final InPlaceMutableHashTable<IT1>.HashTableProber<IT2> prober = join.getProber(probeSideComparator, pairComparator);
 
 
 				IT1 buildSideRecord;
