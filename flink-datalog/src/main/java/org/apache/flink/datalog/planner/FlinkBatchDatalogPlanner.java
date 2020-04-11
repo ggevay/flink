@@ -76,8 +76,8 @@ public class FlinkBatchDatalogPlanner implements Planner {
 		this.functionCatalog = functionCatalog;
 		this.catalogManager = catalogManager;
 		functionCatalog.setPlannerTypeInferenceUtil(PlannerTypeInferenceUtilImpl.INSTANCE);
-		internalSchema = asRootSchema(new CatalogManagerCalciteSchema(catalogManager, false));
-		ExpressionBridge<PlannerExpression> expressionBridge = new ExpressionBridge<PlannerExpression>(functionCatalog, PlannerExpressionConverter.INSTANCE());
+		internalSchema = asRootSchema(new CatalogManagerCalciteSchema(catalogManager, tableConfig,false));
+		ExpressionBridge<PlannerExpression> expressionBridge = new ExpressionBridge<PlannerExpression>(PlannerExpressionConverter.INSTANCE());
 //		planningConfigurationBuilder =
 //			new DatalogPlanningConfigurationBuilder(
 //				tableConfig,

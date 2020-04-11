@@ -113,11 +113,11 @@ public class BatchDatalogEnvironmentImpl extends BatchTableEnvironmentImpl imple
 //                false
 //        );
 
-        ExpressionBridge<PlannerExpression> expressionBridge = new ExpressionBridge<>(functionCatalog, PlannerExpressionConverter.INSTANCE());
+        ExpressionBridge<PlannerExpression> expressionBridge = new ExpressionBridge<>(PlannerExpressionConverter.INSTANCE());
         this.planningConfigurationBuilder = new DatalogPlanningConfigurationBuilder(
                 tableConfig,
                 functionCatalog,
-                asRootSchema(new CatalogManagerCalciteSchema(catalogManager, false)),
+                asRootSchema(new CatalogManagerCalciteSchema(catalogManager, tableConfig,false)),
                 expressionBridge,
                 this);
     }
@@ -520,7 +520,7 @@ public class BatchDatalogEnvironmentImpl extends BatchTableEnvironmentImpl imple
                 this,
                 tableOperation,
                 super.operationTreeBuilder(),
-                functionCatalog);
+                functionCatalog.asLookup(UnresolvedIdentifier::of));
     }
 
     public void validateTableSource(TableSource<?> tableSource) {
