@@ -146,7 +146,9 @@ public abstract class MemorySegment {
 	/**
 	 * Optional owner of the memory segment.
 	 */
-	private final Object owner;
+	private Object owner;
+
+	public boolean inPool = false; //////////////////////////////
 
 	/**
 	 * Creates a new memory segment that represents the memory of the byte array.
@@ -290,6 +292,13 @@ public abstract class MemorySegment {
 	 */
 	public Object getOwner() {
 		return owner;
+	}
+
+	public MemorySegment setOwner(Object owner) {
+//		if (this.owner != null && owner != null)
+//			throw new IllegalStateException();
+		this.owner = owner;
+		return this;
 	}
 
 

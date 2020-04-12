@@ -52,9 +52,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import static org.apache.flink.core.memory.MemorySegmentFactory.allocateOffHeapUnsafeMemory;
-import static org.apache.flink.core.memory.MemorySegmentFactory.allocateUnpooledSegment;
-
 /**
  * The memory manager governs the memory that Flink uses for sorting, hashing, and caching. Memory is represented
  * either in {@link MemorySegment}s of equal size and arbitrary type or in reserved chunks of certain size and {@link MemoryType}.
@@ -89,6 +86,8 @@ public class MemoryManager {
 
 	private final SharedResources sharedResources;
 
+	private final MemorySegmentObjectPoolMap memorySegmentObjectPool;
+
 	/** Flag whether the close() has already been invoked. */
 	private volatile boolean isShutDown;
 
@@ -107,6 +106,7 @@ public class MemoryManager {
 		this.reservedMemory = new ConcurrentHashMap<>();
 		this.budgetByType = new KeyedBudgetManager<>(memorySizeByType, pageSize);
 		this.sharedResources = new SharedResources();
+		this.memorySegmentObjectPool = new MemorySegmentObjectPoolMap();
 		verifyIntTotalNumberOfPages(memorySizeByType, budgetByType.maxTotalNumberOfPages());
 
 		LOG.debug(
@@ -160,6 +160,7 @@ public class MemoryManager {
 				segments.clear();
 			}
 			allocatedSegments.clear();
+			memorySegmentObjectPool.freeAllAndClear();
 		}
 	}
 
@@ -273,6 +274,8 @@ public class MemoryManager {
 				for (long i = acquiredBudget.getAcquiredPerKey().get(memoryType); i > 0; i--) {
 					MemorySegment segment = allocateManagedSegment(memoryType, owner);
 					target.add(segment);
+//					if (segmentsForOwner.contains(segment))
+//						throw new RuntimeException();
 					segmentsForOwner.add(segment);
 				}
 			}
@@ -305,10 +308,10 @@ public class MemoryManager {
 		// remove the reference in the map for the owner
 		try {
 			allocatedSegments.computeIfPresent(segment.getOwner(), (o, segsForOwner) -> {
-				segment.free();
 				if (segsForOwner.remove(segment)) {
 					budgetByType.releasePageForKey(getSegmentType(segment));
 				}
+				memorySegmentObjectPool.returnToPool(segment);
 				//noinspection ReturnOfNull
 				return segsForOwner.isEmpty() ? null : segsForOwner;
 			});
@@ -403,8 +406,8 @@ public class MemoryManager {
 			MemorySegment segment,
 			@Nullable Collection<MemorySegment> segments,
 			EnumMap<MemoryType, Long> releasedMemory) {
-		segment.free();
 		if (segments != null && segments.remove(segment)) {
+			memorySegmentObjectPool.returnToPool(segment);
 			releaseSegment(segment, releasedMemory);
 		}
 	}
@@ -432,7 +435,7 @@ public class MemoryManager {
 		// free each segment
 		EnumMap<MemoryType, Long> releasedMemory = new EnumMap<>(MemoryType.class);
 		for (MemorySegment segment : segments) {
-			segment.free();
+			memorySegmentObjectPool.returnToPool(segment); ////////////////// todo: itt meg lehet, hogy baj lesz a sorrenddel a synchronized kivevese utan, mivel kesobb van a segments.clear()
 			releaseSegment(segment, releasedMemory);
 		}
 		budgetByType.releaseBudgetForKeys(releasedMemory);
@@ -729,9 +732,9 @@ public class MemoryManager {
 	private MemorySegment allocateManagedSegment(MemoryType memoryType, Object owner) {
 		switch (memoryType) {
 			case HEAP:
-				return allocateUnpooledSegment(getPageSize(), owner);
+				return memorySegmentObjectPool.getOrCreateUnpooledSegment(getPageSize(), owner);
 			case OFF_HEAP:
-				return allocateOffHeapUnsafeMemory(getPageSize(), owner);
+				return memorySegmentObjectPool.getOrCreateOffHeapUnsafeMemory(getPageSize(), owner);
 			default:
 				throw new IllegalArgumentException("unrecognized memory type: " + memoryType);
 		}

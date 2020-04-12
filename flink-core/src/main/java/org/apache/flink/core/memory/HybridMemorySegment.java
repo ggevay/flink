@@ -111,6 +111,10 @@ public final class HybridMemorySegment extends MemorySegment {
 		}
 	}
 
+	public boolean isOffHeap() {
+		return offHeapBuffer != null;
+	}
+
 	@Override
 	public ByteBuffer wrap(int offset, int length) {
 		if (address <= addressLimit) {
