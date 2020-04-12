@@ -27,15 +27,24 @@ trait Compiler[T] {
   @throws(classOf[CompileException])
   def compile(cl: ClassLoader, name: String, code: String): Class[T] = {
     require(cl != null, "Classloader must not be null.")
-    val compiler = new SimpleCompiler()
-    compiler.setParentClassLoader(cl)
-    try {
-      compiler.cook(code)
-    } catch {
-      case t: Throwable =>
-        throw new InvalidProgramException("Table program cannot be compiled. " +
-          "This is a bug. Please file an issue.", t)
+    val codeHash = code.hashCode
+    CompileCache.synchronized {
+      CompileCache.cache.getOrElseUpdate(codeHash, {
+        val compiler = new SimpleCompiler()
+        compiler.setParentClassLoader(cl)
+        try {
+          compiler.cook(code)
+        } catch {
+          case t: Throwable =>
+            throw new InvalidProgramException("Table program cannot be compiled. " +
+              "This is a bug. Please file an issue.", t)
+        }
+        compiler.getClassLoader.loadClass(name).asInstanceOf[Class[T]]
+      }).asInstanceOf[Class[T]]
     }
-    compiler.getClassLoader.loadClass(name).asInstanceOf[Class[T]]
   }
+}
+
+object CompileCache {
+  val cache: scala.collection.mutable.HashMap[Int, Class[_]] = scala.collection.mutable.HashMap[Int, Class[_]]()
 }
