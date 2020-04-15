@@ -30,6 +30,7 @@ import org.apache.flink.runtime.io.disk.InputViewIterator;
 import org.apache.flink.runtime.io.disk.SpillingBuffer;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
+import org.apache.flink.runtime.memory.GetItFromTheMemoryManagerMemorySegmentSource;
 import org.apache.flink.runtime.memory.ListMemorySegmentSource;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
@@ -53,8 +54,6 @@ public class TempBarrier<T> implements CloseableInputProvider<T> {
 	
 	private volatile Throwable exception;
 	
-	private final ArrayList<MemorySegment> memory;
-	
 	private volatile boolean writingDone;
 	
 	private volatile boolean closed;
@@ -67,10 +66,7 @@ public class TempBarrier<T> implements CloseableInputProvider<T> {
 		this.serializer = serializerFactory.getSerializer();
 		this.memManager = memManager;
 		
-		this.memory = new ArrayList<MemorySegment>(numPages);
-		memManager.allocatePages(owner, this.memory, numPages);
-		
-		this.buffer = new SpillingBuffer(ioManager, new ListMemorySegmentSource(this.memory), memManager.getPageSize());
+		this.buffer = new SpillingBuffer(ioManager, new GetItFromTheMemoryManagerMemorySegmentSource(owner, memManager, numPages), memManager.getPageSize());
 		this.tempWriter = new TempWritingThread(input, serializerFactory.getSerializer(), this.buffer);
 	}
 	
@@ -125,7 +121,6 @@ public class TempBarrier<T> implements CloseableInputProvider<T> {
 		}
 		
 		this.memManager.release(this.buffer.close());
-		this.memManager.release(this.memory);
 	}
 	
 	private void setException(Throwable t) {

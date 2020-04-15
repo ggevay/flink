@@ -27,6 +27,8 @@ import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.RandomAccessInputView;
 import org.apache.flink.runtime.memory.AbstractPagedOutputView;
+import org.apache.flink.runtime.memory.MemoryAllocationException;
+import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.util.MathUtils;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.MutableObjectIterator;
@@ -112,6 +114,9 @@ public class InPlaceMutableHashTable<T> extends AbstractMutableHashTable<T> {
 	 */
 	private final ArrayList<MemorySegment> freeMemorySegments;
 
+	private MemoryManager memoryManager;
+	private Object memoryOwner;
+
 	private final int numAllMemorySegments;
 
 	private final int segmentSize;
@@ -159,6 +164,12 @@ public class InPlaceMutableHashTable<T> extends AbstractMutableHashTable<T> {
 	private boolean enableResize;
 
 
+	public InPlaceMutableHashTable(TypeSerializer<T> serializer, TypeComparator<T> comparator, List<MemorySegment> memory, MemoryManager memoryManager, Object memoryOwner) {
+		this(serializer, comparator, memory);
+		this.memoryManager = memoryManager;
+		this.memoryOwner = memoryOwner;
+	}
+
 	public InPlaceMutableHashTable(TypeSerializer<T> serializer, TypeComparator<T> comparator, List<MemorySegment> memory) {
 		super(serializer, comparator);
 		this.numAllMemorySegments = memory.size();
@@ -169,6 +180,9 @@ public class InPlaceMutableHashTable<T> extends AbstractMutableHashTable<T> {
 			throw new IllegalArgumentException("Too few memory segments provided. InPlaceMutableHashTable needs at least " +
 				MIN_NUM_MEMORY_SEGMENTS + " memory segments.");
 		}
+
+		this.memoryManager = null;
+		this.memoryOwner = null;
 
 		// Get the size of the first memory segment and record it. All further buffers must have the same size.
 		// the size must also be a power of 2
@@ -335,7 +349,13 @@ public class InPlaceMutableHashTable<T> extends AbstractMutableHashTable<T> {
 		if (s > 0) {
 			return freeMemorySegments.remove(s - 1);
 		} else {
-			return null;
+			//return null;
+			try {
+				return memoryManager.allocatePages(memoryOwner, 1).get(0);
+				// TODO: Check that it is not slow because of allocating one at a time
+			} catch (MemoryAllocationException e) {
+				return null;
+			}
 		}
 	}
 
