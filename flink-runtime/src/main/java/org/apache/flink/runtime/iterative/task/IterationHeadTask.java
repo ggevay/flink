@@ -48,6 +48,7 @@ import org.apache.flink.runtime.iterative.event.AllWorkersDoneEvent;
 import org.apache.flink.runtime.iterative.event.TerminationEvent;
 import org.apache.flink.runtime.iterative.event.WorkerDoneEvent;
 import org.apache.flink.runtime.iterative.io.SerializedUpdateBuffer;
+import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.operators.BatchTask;
 import org.apache.flink.runtime.operators.Driver;
 import org.apache.flink.runtime.operators.hash.InPlaceMutableHashTable;
@@ -189,7 +190,7 @@ public class IterationHeadTask<X, Y, S extends Function, OT> extends AbstractIte
 		try {
 			int numPages = getMemoryManager().computeNumberOfPages(hashjoinMemorySize);
 			memSegments = getMemoryManager().allocatePages(getContainingTask(), numPages);
-			hashTable = new InPlaceMutableHashTable<>(solutionTypeSerializer, solutionTypeComparator, memSegments);
+			hashTable = new InPlaceMutableHashTable<>(solutionTypeSerializer, solutionTypeComparator, memSegments, getMemoryManager(), getContainingTask());
 			success = true;
 			return hashTable;
 		} finally {
