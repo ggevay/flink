@@ -80,6 +80,7 @@ class DataSetRepeatUnion(
       .where((0 until seedDs.getType.getTotalFields): _*)
       .equalTo((0 until iteration.getWorkset.getType.getTotalFields): _*)
       .`with`(new MinusCoGroupFunction[Row](false))
+      .withForwardedFieldsFirst("*")
     val result = iteration.closeWith(delta, delta) //sending first parameter(solutionSet) delta means it will union it with solution set.
     result
   }

@@ -19,6 +19,7 @@ package org.apache.flink.datalog.examples;
 
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
+import org.apache.flink.api.java.io.DiscardingOutputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.datalog.BatchDatalogEnvironment;
@@ -62,6 +63,10 @@ public class TransitiveClosure {
         DataSet<Tuple2<IntValue, IntValue>> resultDS = datalogEnv.toDataSet(queryResult, dataSet.getType());
 
         long start = System.currentTimeMillis();
+
+//        resultDS.output(new DiscardingOutputFormat<>());
+//        System.out.println(env.getExecutionPlan());
+
 
 //        resultDS.writeAsCsv(testFilePath+"_output");
         System.out.println(resultDS.count());
