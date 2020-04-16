@@ -35,7 +35,7 @@ import java.util.List;
 public class NonReusingBuildFirstReOpenableHashJoinIterator<V1, V2, O> extends NonReusingBuildFirstHashJoinIterator<V1, V2, O> {
 
 
-	private final ReOpenableMutableHashTable<V1, V2> reopenHashTable;
+	private final InPlaceMutableHashTable.JoinFacade<V1, V2> reopenHashTable;
 
 	public NonReusingBuildFirstReOpenableHashJoinIterator(
 			MutableObjectIterator<V1> firstInput,
@@ -57,11 +57,11 @@ public class NonReusingBuildFirstReOpenableHashJoinIterator<V1, V2, O> extends N
 				comparator2, pairComparator, memManager, ioManager, ownerTask,
 				memoryFraction, probeSideOuterJoin, buildSideOuterJoin, useBitmapFilters);
 		
-		reopenHashTable = (ReOpenableMutableHashTable<V1, V2>) hashJoin;
+		reopenHashTable = hashJoin;
 	}
 
 	@Override
-	public <BT, PT> MutableHashTable<BT, PT> getHashJoin(
+	public <BT, PT> InPlaceMutableHashTable.JoinFacade<BT, PT> getHashJoin(
 			TypeSerializer<BT> buildSideSerializer, TypeComparator<BT> buildSideComparator,
 			TypeSerializer<PT> probeSideSerializer, TypeComparator<PT> probeSideComparator,
 			TypePairComparator<PT, BT> pairComparator,
@@ -73,9 +73,9 @@ public class NonReusingBuildFirstReOpenableHashJoinIterator<V1, V2, O> extends N
 		final int numPages = memManager.computeNumberOfPages(memoryFraction);
 		final List<MemorySegment> memorySegments = memManager.allocatePages(ownerTask, numPages);
 		
-		return new ReOpenableMutableHashTable<BT, PT>(buildSideSerializer, probeSideSerializer,
+		return new InPlaceMutableHashTable.JoinFacade<BT, PT>(buildSideSerializer, probeSideSerializer,
 				buildSideComparator, probeSideComparator, pairComparator,
-				memorySegments, ioManager, useBitmapFilters);
+				memorySegments, ioManager, useBitmapFilters, memManager, ownerTask);
 	}
 
 	/**

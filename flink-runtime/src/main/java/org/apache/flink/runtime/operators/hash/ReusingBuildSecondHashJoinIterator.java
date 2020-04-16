@@ -42,7 +42,7 @@ import org.apache.flink.util.MutableObjectIterator;
  */
 public class ReusingBuildSecondHashJoinIterator<V1, V2, O> extends HashJoinIteratorBase implements JoinTaskIterator<V1, V2, O> {
 	
-	protected final MutableHashTable<V2, V1> hashJoin;
+	protected final InPlaceMutableHashTable.JoinFacade<V2, V1> hashJoin;
 	
 	private final V2 nextBuildSideObject;
 	

@@ -43,7 +43,7 @@ import java.util.List;
  */
 public class NonReusingBuildFirstHashJoinIterator<V1, V2, O> extends HashJoinIteratorBase implements JoinTaskIterator<V1, V2, O> {
 
-	protected final MutableHashTable<V1, V2> hashJoin;
+	protected final InPlaceMutableHashTable.JoinFacade<V1, V2> hashJoin;
 
 	protected final TypeSerializer<V2> probeSideSerializer;
 

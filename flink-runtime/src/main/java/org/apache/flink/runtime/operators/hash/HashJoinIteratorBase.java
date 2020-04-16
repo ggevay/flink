@@ -33,7 +33,7 @@ import java.util.List;
  */
 public class HashJoinIteratorBase {
 	
-	public <BT, PT> MutableHashTable<BT, PT> getHashJoin(
+	public <BT, PT> InPlaceMutableHashTable.JoinFacade<BT, PT> getHashJoin(
 			TypeSerializer<BT> buildSideSerializer,
 			TypeComparator<BT> buildSideComparator,
 			TypeSerializer<PT> probeSideSerializer,
@@ -48,9 +48,9 @@ public class HashJoinIteratorBase {
 		final int numPages = memManager.computeNumberOfPages(memoryFraction);
 		final List<MemorySegment> memorySegments = memManager.allocatePages(ownerTask, numPages);
 		
-		return new MutableHashTable<BT, PT>(buildSideSerializer, probeSideSerializer,
+		return new InPlaceMutableHashTable.JoinFacade<BT, PT>(buildSideSerializer, probeSideSerializer,
 				buildSideComparator, probeSideComparator, pairComparator,
 				memorySegments, ioManager,
-				useBloomFilters);
+				useBloomFilters, memManager, ownerTask);
 	}
 }

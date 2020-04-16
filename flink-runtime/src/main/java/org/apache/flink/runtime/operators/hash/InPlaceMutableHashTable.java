@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.operators.hash;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.typeutils.SameTypePairComparator;
 import org.apache.flink.api.common.typeutils.TypeComparator;
@@ -26,6 +27,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.RandomAccessInputView;
+import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.memory.AbstractPagedOutputView;
 import org.apache.flink.runtime.memory.MemoryAllocationException;
 import org.apache.flink.runtime.memory.MemoryManager;
@@ -887,6 +889,29 @@ public class InPlaceMutableHashTable<T> extends AbstractMutableHashTable<T> {
 			return getMatchFor(probeSideRecord, buildSideSerializer.createInstance());
 		}
 
+		public T getNextMatch(T targetForMatch) {
+			T currentRecordInList = targetForMatch;
+			try {
+				while (nextPtr != END_OF_LIST && !closed) {
+					prevElemPtr = curElemPtr;
+					curElemPtr = nextPtr;
+
+					recordArea.setReadPosition(curElemPtr);
+					nextPtr = recordArea.readPointer();
+
+					currentRecordInList = recordArea.readRecord(currentRecordInList);
+					recordEnd = recordArea.getReadPosition();
+					if (pairComparator.equalToReference(currentRecordInList)) {
+						// we found an element with a matching key, and not just a hash collision
+						return currentRecordInList;
+					}
+				}
+			} catch (IOException ex) {
+				throw new RuntimeException("Error deserializing record from the hashtable: " + ex.getMessage(), ex);
+			}
+			return null;
+		}
+
 		/**
 		 * This method can be called after getMatchFor returned a match.
 		 * It will overwrite the record that was found by getMatchFor.
@@ -1104,6 +1129,128 @@ public class InPlaceMutableHashTable<T> extends AbstractMutableHashTable<T> {
 			emit();
 			close();
 			open(oldNumBucketSegments);
+		}
+	}
+
+	public final static class JoinFacade<BT, PT> {
+
+		final InPlaceMutableHashTable<BT> ht;
+		final InPlaceMutableHashTable<BT>.HashTableProber<PT> prober;
+		final TypeSerializer<PT> probeSideSerializer;
+		final TypeComparator<PT> probeSideComparator;
+		final TypePairComparator<PT, BT> comparator;
+
+		MutableHashTable.ProbeIterator<PT> probeSideInput;
+
+		BuildSideIterator buildSideIterator;
+
+		BT buildSideMatchReuse;
+
+		boolean probeMatched = false;
+
+		JoinFacade(TypeSerializer<BT> buildSideSerializer,
+				   TypeSerializer<PT> probeSideSerializer,
+				   TypeComparator<BT> buildSideComparator,
+				   TypeComparator<PT> probeSideComparator,
+				   TypePairComparator<PT, BT> comparator,
+				   List<MemorySegment> memorySegments, IOManager ioManager,
+				   boolean useBitmapFilters,
+				   MemoryManager memoryManager, Object memoryOwner) {
+
+			ht = new InPlaceMutableHashTable<>(buildSideSerializer, buildSideComparator, memorySegments, memoryManager, memoryOwner);
+			prober = ht.getProber(probeSideComparator, comparator);
+
+			this.probeSideSerializer = probeSideSerializer;
+			this.probeSideComparator = probeSideComparator;
+			this.comparator = comparator;
+
+			this.buildSideMatchReuse = buildSideSerializer.createInstance();
+		}
+
+		public void open(final MutableObjectIterator<BT> buildSide, final MutableObjectIterator<PT> probeSide)
+				throws IOException {
+
+			open(buildSide, probeSide, false);
+		}
+
+		public void open(final MutableObjectIterator<BT> buildSide,	final MutableObjectIterator<PT> probeSide,
+						 boolean buildOuterJoin) throws IOException {
+			if (buildOuterJoin)
+				throw new NotImplementedException("paper writing mode...");
+
+			ht.open();
+
+			// Insert all from the build side input to the hash table
+			BT cur = ht.buildSideSerializer.createInstance();
+			while (buildSide.next(cur) != null) {
+				ht.insert(cur); // serializes it, so it's ok to overwrite later
+			}
+
+			probeSideInput = new MutableHashTable.ProbeIterator<>(probeSide, probeSideSerializer.createInstance());
+			probeMatched = false;
+		}
+
+		public boolean nextRecord() throws IOException {
+			while (probeSideInput.next() != null) {
+				BT match = prober.getMatchFor(probeSideInput.getCurrent(), buildSideMatchReuse);
+				if (match != null) {
+					buildSideIterator = new BuildSideIterator(match);
+					probeMatched = true;
+					return true;
+				}
+			}
+
+			probeMatched = false;
+			return false;
+		}
+
+		public final class BuildSideIterator implements MutableObjectIterator<BT> {
+
+			BT current;
+
+			public BuildSideIterator(BT first) {
+				current = first;
+			}
+
+			@Override
+			public BT next(BT reuse) {
+				BT old = current;
+				current = prober.getNextMatch(reuse);
+				return old;
+			}
+
+			@Override
+			public BT next() {
+				return next(ht.buildSideSerializer.createInstance());
+			}
+		}
+
+		public MutableObjectIterator<BT> getBuildSideIterator() {
+			return buildSideIterator;
+		}
+
+		public PT getCurrentProbeRecord() {
+			if (probeMatched)
+				return probeSideInput.getCurrent();
+			else
+				return null;
+		}
+
+		public void close() {
+			ht.close();
+		}
+
+		public void reopenProbe(MutableObjectIterator<PT> probeInput) throws IOException {
+			probeSideInput.set(probeInput);
+			probeMatched = false;
+		}
+
+		public List<MemorySegment> getFreedMemory() {
+			return ht.getFreeMemory();
+		}
+
+		public void abort() {
+			ht.abort();
 		}
 	}
 }
