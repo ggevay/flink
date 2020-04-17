@@ -43,13 +43,13 @@ public class TransitiveClosure {
                         + "tc(X,Y) :- tc(X,Z),graph(Z,Y).\n";
         String query = "tc(X,Y)?";
 
-        //ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-        Configuration conf = new Configuration();
-        conf.setString("taskmanager.memory.managed.size","8g"); //(8g orig), 1400m crashed, 1500m finishes // After memory management changes: 500m crashed, 600m finishes
-        conf.setString("taskmanager.numberOfTaskSlots","6");
-        conf.setBoolean("pipeline.object-reuse",true);
-        conf.setBoolean("datalog-merge",true);
-        ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment(conf);
+        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+//        Configuration conf = new Configuration();
+//        conf.setString("taskmanager.memory.managed.size","8g"); //(8g orig), 1400m crashed, 1500m finishes // After memory management changes: 500m crashed, 600m finishes
+//        conf.setString("taskmanager.numberOfTaskSlots","6");
+//        conf.setBoolean("pipeline.object-reuse",true);
+//        conf.setBoolean("datalog-merge",true);
+//        ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment(conf);
 
         EnvironmentSettings settings = EnvironmentSettings
                 .newInstance()
