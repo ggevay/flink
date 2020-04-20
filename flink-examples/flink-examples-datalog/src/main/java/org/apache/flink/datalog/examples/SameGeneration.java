@@ -23,6 +23,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.datalog.BatchDatalogEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
+import org.apache.flink.types.IntValue;
 
 public class SameGeneration {
     public static void main(String[] args) throws Exception {
@@ -45,11 +46,11 @@ public class SameGeneration {
                 .build();
         BatchDatalogEnvironment datalogEnv = BatchDatalogEnvironment.create(env, settings);
 
-        DataSet<Tuple2<String, String>> dataSet = env.readCsvFile(testFilePath).fieldDelimiter(",").types(String.class, String.class);
+        DataSet<Tuple2<IntValue, IntValue>> dataSet = env.readCsvFile(testFilePath).fieldDelimiter(",").types(IntValue.class, IntValue.class);
 
         datalogEnv.registerDataSet("arc", dataSet, "v1,v2");
         Table queryResult = datalogEnv.datalogQuery(inputProgram, query);
-        DataSet<Tuple2<String, String>> resultDS = datalogEnv.toDataSet(queryResult, dataSet.getType());
+        DataSet<Tuple2<IntValue, IntValue>> resultDS = datalogEnv.toDataSet(queryResult, dataSet.getType());
 
         System.out.println(resultDS.count());
 //        resultDS.writeAsCsv(testFilePath + "_output");
