@@ -23,6 +23,7 @@ import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.RepeatUnion
 import org.apache.calcite.rel.{RelNode, RelWriter}
+import org.apache.flink.api.common.functions.JoinFunction
 import org.apache.flink.api.java.DataSet
 import org.apache.flink.table.api.BatchQueryConfig
 import org.apache.flink.table.api.internal.BatchTableEnvImpl
@@ -66,6 +67,8 @@ class DataSetRepeatUnion(
                                 tableEnv: BatchTableEnvImpl,
                                 queryConfig: BatchQueryConfig): DataSet[Row] = {
     val config = tableEnv.getConfig
+    val useDatalogMerge = tableEnv.execEnv.getConfig.getDatalogMerge
+
     val seedDs = seed.asInstanceOf[DataSetRel].translateToPlan(tableEnv, queryConfig)
 
     val workingSet: DataSet[Row] = seedDs
@@ -75,14 +78,24 @@ class DataSetRepeatUnion(
     val iteration = solutionSet.iterateDelta(workingSet, maxIterations, (0 until seedDs.getType.getTotalFields): _*) //used maxIteration = Int.MaxValue to check if the iteration stops upon workingset getting emptied.
     updateCatalog(tableEnv, iteration.getWorkset, "__TEMP")
     val iterativeDs = iterative.asInstanceOf[DataSetRel].translateToPlan(tableEnv, queryConfig)
-    val delta = iterativeDs
-      .coGroup(iteration.getSolutionSet)
-      .where((0 until seedDs.getType.getTotalFields): _*)
-      .equalTo((0 until iteration.getWorkset.getType.getTotalFields): _*)
-      .`with`(new MinusCoGroupFunction[Row](false))
-      .withForwardedFieldsFirst("*")
-    val result = iteration.closeWith(delta, delta) //sending first parameter(solutionSet) delta means it will union it with solution set.
-    result
+
+    val delta =
+      if (!useDatalogMerge)
+        iterativeDs
+          .coGroup(iteration.getSolutionSet)
+          .where((0 until seedDs.getType.getTotalFields): _*)
+          .equalTo((0 until iteration.getWorkset.getType.getTotalFields): _*)
+          .`with`(new MinusCoGroupFunction[Row](false))
+          .withForwardedFieldsFirst("*")
+      else
+        iterativeDs
+          .join(iteration.getSolutionSet)
+          .where((0 until seedDs.getType.getTotalFields): _*)
+          .equalTo((0 until iteration.getWorkset.getType.getTotalFields): _*)
+          .`with`(new JoinFunction[Row, Row, Row] {override def join(first: Row, second: Row): Row = first})
+          .withForwardedFieldsFirst("*")
+
+    iteration.closeWith(delta, delta) //sending first parameter(solutionSet) delta means it will union it with solution set.
   }
 
   private def updateCatalog(tableEnv: BatchTableEnvImpl, ds: DataSet[Row], tableName: String): Unit = {

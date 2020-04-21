@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.operators;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.FlatJoinFunction;
 import org.apache.flink.api.common.operators.util.JoinHashMap;
@@ -157,59 +158,93 @@ public class JoinWithSolutionSetSecondDriver<IT1, IT2, OT> implements Resettable
 		final Collector<OT> collector = taskContext.getOutputCollector();
 		final MutableObjectIterator<IT1> probeSideInput = taskContext.getInput(0);
 
-		if (objectReuseEnabled) {
-			IT1 probeSideRecord = this.probeSideRecord;
+		if (!taskContext.getExecutionConfig().getDatalogMerge()) {
 
-			if (hashTable != null) {
-				final InPlaceMutableHashTable<IT2> join = hashTable;
-				final InPlaceMutableHashTable<IT2>.HashTableProber<IT1> prober = join.getProber(probeSideComparator, pairComparator);
+			if (objectReuseEnabled) {
+				IT1 probeSideRecord = this.probeSideRecord;
+
+				if (hashTable != null) {
+					final InPlaceMutableHashTable<IT2> join = hashTable;
+					final InPlaceMutableHashTable<IT2>.HashTableProber<IT1> prober = join.getProber(probeSideComparator, pairComparator);
 
 
-				IT2 buildSideRecord = this.solutionSideRecord;
+					IT2 buildSideRecord = this.solutionSideRecord;
 
-				while (this.running && ((probeSideRecord = probeSideInput.next(probeSideRecord)) != null)) {
-					IT2 matchedRecord = prober.getMatchFor(probeSideRecord, buildSideRecord);
-					joinFunction.join(probeSideRecord, matchedRecord, collector);
-				}
-			} else if (objectMap != null) {
-				final JoinHashMap<IT2> hashTable = this.objectMap;
-				final JoinHashMap<IT2>.Prober<IT1> prober = this.objectMap.createProber(probeSideComparator, pairComparator);
-				final TypeSerializer<IT2> buildSerializer = hashTable.getBuildSerializer();
+					while (this.running && ((probeSideRecord = probeSideInput.next(probeSideRecord)) != null)) {
+						IT2 matchedRecord = prober.getMatchFor(probeSideRecord, buildSideRecord);
+						joinFunction.join(probeSideRecord, matchedRecord, collector);
+					}
+				} else if (objectMap != null) {
+					final JoinHashMap<IT2> hashTable = this.objectMap;
+					final JoinHashMap<IT2>.Prober<IT1> prober = this.objectMap.createProber(probeSideComparator, pairComparator);
+					final TypeSerializer<IT2> buildSerializer = hashTable.getBuildSerializer();
 
-				while (this.running && ((probeSideRecord = probeSideInput.next(probeSideRecord)) != null)) {
-					IT2 match = prober.lookupMatch(probeSideRecord);
-					joinFunction.join(probeSideRecord, buildSerializer.copy(match), collector);
+					while (this.running && ((probeSideRecord = probeSideInput.next(probeSideRecord)) != null)) {
+						IT2 match = prober.lookupMatch(probeSideRecord);
+						joinFunction.join(probeSideRecord, buildSerializer.copy(match), collector);
+					}
+				} else {
+					throw new RuntimeException();
 				}
 			} else {
-				throw new RuntimeException();
+				IT1 probeSideRecord;
+
+				if (hashTable != null) {
+					final InPlaceMutableHashTable<IT2> join = hashTable;
+					final InPlaceMutableHashTable<IT2>.HashTableProber<IT1> prober = join.getProber(probeSideComparator, pairComparator);
+
+
+					IT2 buildSideRecord;
+
+					while (this.running && ((probeSideRecord = probeSideInput.next()) != null)) {
+						buildSideRecord = prober.getMatchFor(probeSideRecord);
+						joinFunction.join(probeSideRecord, buildSideRecord, collector);
+					}
+				} else if (objectMap != null) {
+					final JoinHashMap<IT2> hashTable = this.objectMap;
+					final JoinHashMap<IT2>.Prober<IT1> prober = this.objectMap.createProber(probeSideComparator, pairComparator);
+					final TypeSerializer<IT2> buildSerializer = hashTable.getBuildSerializer();
+
+					while (this.running && ((probeSideRecord = probeSideInput.next()) != null)) {
+						IT2 match = prober.lookupMatch(probeSideRecord);
+						joinFunction.join(probeSideRecord, buildSerializer.copy(match), collector);
+					}
+				} else {
+					throw new RuntimeException();
+				}
+
 			}
+
 		} else {
-			IT1 probeSideRecord;
+			// datalog-merge
 
-			if (hashTable != null) {
-				final InPlaceMutableHashTable<IT2> join = hashTable;
-				final InPlaceMutableHashTable<IT2>.HashTableProber<IT1> prober = join.getProber(probeSideComparator, pairComparator);
+			if (objectReuseEnabled) {
+				IT1 probeSideRecord = this.probeSideRecord;
+
+				if (hashTable != null) {
+					final InPlaceMutableHashTable<IT2> join = hashTable;
+					final InPlaceMutableHashTable<IT2>.HashTableProber<IT1> prober = join.getProber(probeSideComparator, pairComparator);
 
 
-				IT2 buildSideRecord;
+					IT2 buildSideRecord = this.solutionSideRecord;
 
-				while (this.running && ((probeSideRecord = probeSideInput.next()) != null)) {
-					buildSideRecord = prober.getMatchFor(probeSideRecord);
-					joinFunction.join(probeSideRecord, buildSideRecord, collector);
-				}
-			} else if (objectMap != null) {
-				final JoinHashMap<IT2> hashTable = this.objectMap;
-				final JoinHashMap<IT2>.Prober<IT1> prober = this.objectMap.createProber(probeSideComparator, pairComparator);
-				final TypeSerializer<IT2> buildSerializer = hashTable.getBuildSerializer();
-
-				while (this.running && ((probeSideRecord = probeSideInput.next()) != null)) {
-					IT2 match = prober.lookupMatch(probeSideRecord);
-					joinFunction.join(probeSideRecord, buildSerializer.copy(match), collector);
+					while (this.running && ((probeSideRecord = probeSideInput.next(probeSideRecord)) != null)) {
+						IT2 matchedRecord = prober.getMatchFor(probeSideRecord, buildSideRecord);
+						if (matchedRecord == null) {
+							prober.insertAfterNoMatch((IT2)probeSideRecord);
+							collector.collect((OT)probeSideRecord); // needed for the workset
+						} else {
+							// Nothing to do, record is already in the solution set (we assume monotonic Datalog queries)
+						}
+					}
+				} else if (objectMap != null) {
+					throw new NotImplementedException("");
+				} else {
+					throw new RuntimeException();
 				}
 			} else {
-				throw new RuntimeException();
+				throw new NotImplementedException("Object reuse disabled case is not implemented for datalog-merge");
 			}
-
 		}
 	}
 

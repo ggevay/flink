@@ -39,19 +39,20 @@ public class SolutionSetUpdateOutputCollector<T> implements Collector<T> {
 
 	private final InPlaceMutableHashTable<T> solutionSet;
 
-	public SolutionSetUpdateOutputCollector(InPlaceMutableHashTable<T> solutionSet) {
-		this(solutionSet, null);
-	}
+	private final boolean datalogMerge;
 
-	public SolutionSetUpdateOutputCollector(InPlaceMutableHashTable<T> solutionSet, Collector<T> delegate) {
+	public SolutionSetUpdateOutputCollector(InPlaceMutableHashTable<T> solutionSet, Collector<T> delegate, boolean datalogMerge) {
 		this.solutionSet = solutionSet;
 		this.delegate = delegate;
+		this.datalogMerge = datalogMerge;
 	}
 
 	@Override
 	public void collect(T record) {
 		try {
-			solutionSet.insertOrReplaceRecord(record);
+			if (!datalogMerge) {
+				solutionSet.insertOrReplaceRecord(record);
+			}
 			if (delegate != null) {
 				delegate.collect(record);
 			}

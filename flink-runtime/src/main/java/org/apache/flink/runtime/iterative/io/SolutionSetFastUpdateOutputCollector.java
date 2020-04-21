@@ -49,14 +49,15 @@ public class SolutionSetFastUpdateOutputCollector<T> implements Collector<T> {
 
 	@Override
 	public void collect(T record) {
-		try {
-			solutionSet.insertOrReplaceRecord(record);
-			if (delegate != null) {
-				delegate.collect(record);
-			}
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+		throw new RuntimeException();
+//		try {
+//			solutionSet.insertOrReplaceRecord(record);
+//			if (delegate != null) {
+//				delegate.collect(record);
+//			}
+//		} catch (IOException e) {
+//			throw new RuntimeException(e);
+//		}
 	}
 
 	@Override

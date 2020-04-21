@@ -241,7 +241,7 @@ class DataSetJoin(
       genFunction.code,
       genFunction.returnType)
 
-    left.join(right)
+    left.join(right, JoinHint.REPARTITION_HASH_SECOND)
       .where(leftKeys: _*)
       .equalTo(rightKeys: _*)
       .`with`(joinFun)

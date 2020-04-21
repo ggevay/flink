@@ -87,6 +87,8 @@ import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.util.AbstractID;
 import org.apache.flink.util.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -107,6 +109,8 @@ import java.util.List;
  */
 @Public
 public abstract class DataSet<T> {
+
+	private static final Logger LOG = LoggerFactory.getLogger(DataSet.class);
 
 	protected final ExecutionEnvironment context;
 
@@ -749,6 +753,9 @@ public abstract class DataSet<T> {
 	 * @see DataSet
 	 */
 	public <R> JoinOperatorSets<T, R> join(DataSet<R> other) {
+		if (getExecutionEnvironment().getConfig().getDatalogMerge() && other instanceof DeltaIteration.SolutionSetPlaceHolder) {
+			LOG.warn("datalog-merge is true -- Doing datalog merge instead of joining with the solution set");
+		}
 		return new JoinOperatorSets<>(this, other);
 	}
 
