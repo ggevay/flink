@@ -345,7 +345,7 @@ public abstract class AbstractIterativeTask<S extends Function, OT> extends Batc
 		if (ss instanceof InPlaceMutableHashTable) {
 			@SuppressWarnings("unchecked")
 			InPlaceMutableHashTable<OT> solutionSet = (InPlaceMutableHashTable<OT>) ss;
-			return new SolutionSetUpdateOutputCollector<OT>(solutionSet, delegate);
+			return new SolutionSetUpdateOutputCollector<OT>(solutionSet, delegate, getExecutionConfig().getDatalogMerge());
 		}
 		else if (ss instanceof JoinHashMap) {
 			@SuppressWarnings("unchecked")

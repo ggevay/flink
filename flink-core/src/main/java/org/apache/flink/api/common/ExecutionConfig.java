@@ -23,6 +23,7 @@ import org.apache.flink.annotation.Public;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.configuration.CoreOptions;
+import org.apache.flink.configuration.DatalogOptions;
 import org.apache.flink.configuration.ExecutionOptions;
 import org.apache.flink.configuration.MetricOptions;
 import org.apache.flink.configuration.PipelineOptions;
@@ -166,6 +167,8 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 
 	/** The default input dependency constraint to schedule tasks. */
 	private InputDependencyConstraint defaultInputDependencyConstraint = InputDependencyConstraint.ANY;
+
+	private boolean datalogMerge = true;
 
 	// ------------------------------- User code values --------------------------------------------
 
@@ -978,6 +981,14 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 		this.failTaskOnCheckpointError = failTaskOnCheckpointError;
 	}
 
+	public boolean getDatalogMerge() {
+		return datalogMerge;
+	}
+
+	public void setDatalogMerge(boolean datalogMerge) {
+		this.datalogMerge = datalogMerge;
+	}
+
 	@Override
 	public boolean equals(Object obj) {
 		if (obj instanceof ExecutionConfig) {
@@ -1003,7 +1014,8 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 				registeredPojoTypes.equals(other.registeredPojoTypes) &&
 				taskCancellationIntervalMillis == other.taskCancellationIntervalMillis &&
 				useSnapshotCompression == other.useSnapshotCompression &&
-				defaultInputDependencyConstraint == other.defaultInputDependencyConstraint;
+				defaultInputDependencyConstraint == other.defaultInputDependencyConstraint &&
+				datalogMerge == other.datalogMerge;
 
 		} else {
 			return false;
@@ -1031,7 +1043,8 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 			registeredPojoTypes,
 			taskCancellationIntervalMillis,
 			useSnapshotCompression,
-			defaultInputDependencyConstraint);
+			defaultInputDependencyConstraint,
+			datalogMerge);
 	}
 
 	@Override
@@ -1066,6 +1079,7 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 			", defaultKryoSerializerClasses=" + defaultKryoSerializerClasses +
 			", registeredKryoTypes=" + registeredKryoTypes +
 			", registeredPojoTypes=" + registeredPojoTypes +
+			", datalogMerge=" + datalogMerge +
 			'}';
 	}
 
@@ -1208,6 +1222,9 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 		configuration.getOptional(PipelineOptions.KRYO_REGISTERED_CLASSES)
 			.map(c -> loadClasses(c, classLoader, "Could not load kryo type to be registered."))
 			.ifPresent(c -> this.registeredKryoTypes = c);
+
+		configuration.getOptional(DatalogOptions.DATALOG_MERGE)
+			.ifPresent(this::setDatalogMerge);
 	}
 
 	private LinkedHashSet<Class<?>> loadClasses(List<String> classNames, ClassLoader classLoader, String errorMessage) {
