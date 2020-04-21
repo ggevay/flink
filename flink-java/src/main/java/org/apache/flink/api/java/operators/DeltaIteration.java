@@ -96,6 +96,11 @@ public class DeltaIteration<ST, WT> {
 				initialSolutionSet.getType(), initialWorkset.getType(), this, solutionSetDelta, newWorkset, keys, maxIterations);
 	}
 
+	public DataSet<ST> datalogMerge(DataSet<ST> toMerge) {
+		return new DeltaIterationResultSet<ST, WT>(initialSolutionSet.getExecutionEnvironment(),
+				initialSolutionSet.getType(), initialWorkset.getType(), this, toMerge, keys, maxIterations);
+	}
+
 	/**
 	 * Gets the initial solution set. This is the data set on which the delta iteration was started.
 	 *

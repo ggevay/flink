@@ -323,7 +323,11 @@ public class GraphCreatingVisitor implements Visitor<Operator<?>> {
 			// One check is for free during the translation, we do the other check here as a pre-condition
 			{
 				StepFunctionValidator wsf = new StepFunctionValidator();
-				iter.getNextWorkset().accept(wsf);
+				if (iter.getDatalogMerge() == null) {
+					iter.getNextWorkset().accept(wsf);
+				} else {
+					iter.getDatalogMerge().accept(wsf);
+				}
 				if (!wsf.hasFoundWorkset()) {
 					throw new CompilerException("In the given program, the next workset does not depend on the workset. " +
 														"This is a prerequisite in delta iterations.");
@@ -337,18 +341,24 @@ public class GraphCreatingVisitor implements Visitor<Operator<?>> {
 			final GraphCreatingVisitor recursiveCreator = new GraphCreatingVisitor(
 					this, true, iterNode.getParallelism(), defaultDataExchangeMode, closure);
 
-			// descend from the solution set delta. check that it depends on both the workset
-			// and the solution set. If it does depend on both, this descend should create both nodes
-			iter.getSolutionSetDelta().accept(recursiveCreator);
+			if (iter.getDatalogMerge() == null) {
+				// descend from the solution set delta. check that it depends on both the workset
+				// and the solution set. If it does depend on both, this descend should create both nodes
+				iter.getSolutionSetDelta().accept(recursiveCreator);
+			} else {
+				iter.getDatalogMerge().accept(recursiveCreator);
+			}
 
 			final WorksetNode worksetNode = (WorksetNode) recursiveCreator.con2node.get(iter.getWorkset());
 
 			if (worksetNode == null) {
-				throw new CompilerException("In the given program, the solution set delta does not depend on the workset." +
+				throw new CompilerException("In the given program, the solution set delta (or datalogMerge) does not depend on the workset." +
 													"This is a prerequisite in delta iterations.");
 			}
 
-			iter.getNextWorkset().accept(recursiveCreator);
+			if (iter.getDatalogMerge() == null) {
+				iter.getNextWorkset().accept(recursiveCreator);
+			} // else already done above
 
 			SolutionSetNode solutionSetNode = (SolutionSetNode) recursiveCreator.con2node.get(iter.getSolutionSet());
 
@@ -387,12 +397,17 @@ public class GraphCreatingVisitor implements Visitor<Operator<?>> {
 				}
 			}
 
-			final OptimizerNode nextWorksetNode = recursiveCreator.con2node.get(iter.getNextWorkset());
-			final OptimizerNode solutionSetDeltaNode = recursiveCreator.con2node.get(iter.getSolutionSetDelta());
-
 			// set the step function nodes to the iteration node
 			iterNode.setPartialSolution(solutionSetNode, worksetNode);
-			iterNode.setNextPartialSolution(solutionSetDeltaNode, nextWorksetNode, defaultDataExchangeMode);
+
+			if (iter.getDatalogMerge() == null) {
+				final OptimizerNode nextWorksetNode = recursiveCreator.con2node.get(iter.getNextWorkset());
+				final OptimizerNode solutionSetDeltaNode = recursiveCreator.con2node.get(iter.getSolutionSetDelta());
+				iterNode.setNextPartialSolution(solutionSetDeltaNode, nextWorksetNode, defaultDataExchangeMode);
+			} else {
+				final OptimizerNode datalogMergeNode = recursiveCreator.con2node.get(iter.getDatalogMerge());
+				iterNode.setDatalogMerge(datalogMergeNode, defaultDataExchangeMode);
+			}
 
 			// go over the contained data flow and mark the dynamic path nodes
 			StaticDynamicPathIdentifier pathIdentifier = new StaticDynamicPathIdentifier(iterNode.getCostWeight());

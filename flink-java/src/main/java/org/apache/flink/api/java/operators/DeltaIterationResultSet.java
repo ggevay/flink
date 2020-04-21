@@ -33,17 +33,19 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 @Public
 public class DeltaIterationResultSet<ST, WT> extends DataSet<ST> {
 
-	private DeltaIteration<ST, WT> iterationHead;
+	private final DeltaIteration<ST, WT> iterationHead;
 
-	private DataSet<ST> nextSolutionSet;
+	private final DataSet<ST> nextSolutionSet;
 
-	private DataSet<WT> nextWorkset;
+	private final DataSet<WT> nextWorkset;
 
-	private Keys<ST> keys;
+	private final DataSet<ST> datalogMerge;
 
-	private int maxIterations;
+	private final Keys<ST> keys;
 
-	private TypeInformation<WT> typeWS;
+	private final int maxIterations;
+
+	private final TypeInformation<WT> typeWS;
 
 	DeltaIterationResultSet(ExecutionEnvironment context,
 							TypeInformation<ST> typeSS,
@@ -55,8 +57,34 @@ public class DeltaIterationResultSet<ST, WT> extends DataSet<ST> {
 							int maxIterations) {
 		super(context, typeSS);
 		this.iterationHead = iterationHead;
+
 		this.nextWorkset = nextWorkset;
 		this.nextSolutionSet = nextSolutionSet;
+		this.datalogMerge = null;
+
+		this.keys = keys;
+		this.maxIterations = maxIterations;
+		this.typeWS = typeWS;
+	}
+
+	DeltaIterationResultSet(ExecutionEnvironment context,
+							TypeInformation<ST> typeSS,
+							TypeInformation<WT> typeWS,
+							DeltaIteration<ST, WT> iterationHead,
+							DataSet<ST> toMerge,
+							Keys<ST> keys,
+							int maxIterations) {
+		super(context, typeSS);
+
+		if (!typeSS.equals(typeWS))
+			throw new RuntimeException("In case of Datalog programs, the type of the initial workset and the solution set should be the same");
+
+		this.iterationHead = iterationHead;
+
+		this.nextWorkset = null;
+		this.nextSolutionSet = null;
+		this.datalogMerge = toMerge;
+
 		this.keys = keys;
 		this.maxIterations = maxIterations;
 		this.typeWS = typeWS;
@@ -72,6 +100,10 @@ public class DeltaIterationResultSet<ST, WT> extends DataSet<ST> {
 
 	public DataSet<WT> getNextWorkset() {
 		return nextWorkset;
+	}
+
+	public DataSet<ST> getDatalogMerge() {
+		return datalogMerge;
 	}
 
 	@Internal

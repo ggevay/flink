@@ -18,12 +18,6 @@
 
 package org.apache.flink.optimizer.dag;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-
 import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.operators.SemanticProperties;
 import org.apache.flink.api.common.operators.SemanticProperties.EmptySemanticProperties;
@@ -32,7 +26,6 @@ import org.apache.flink.api.common.operators.util.FieldList;
 import org.apache.flink.api.common.typeinfo.NothingTypeInfo;
 import org.apache.flink.optimizer.CompilerException;
 import org.apache.flink.optimizer.DataStatistics;
-import org.apache.flink.optimizer.traversals.InterestingPropertyVisitor;
 import org.apache.flink.optimizer.costs.CostEstimator;
 import org.apache.flink.optimizer.dataproperties.GlobalProperties;
 import org.apache.flink.optimizer.dataproperties.InterestingProperties;
@@ -46,11 +39,12 @@ import org.apache.flink.optimizer.plan.Channel;
 import org.apache.flink.optimizer.plan.DualInputPlanNode;
 import org.apache.flink.optimizer.plan.NamedChannel;
 import org.apache.flink.optimizer.plan.PlanNode;
+import org.apache.flink.optimizer.plan.PlanNode.FeedbackPropertiesMeetRequirementsReport;
 import org.apache.flink.optimizer.plan.SingleInputPlanNode;
 import org.apache.flink.optimizer.plan.SolutionSetPlanNode;
 import org.apache.flink.optimizer.plan.WorksetIterationPlanNode;
 import org.apache.flink.optimizer.plan.WorksetPlanNode;
-import org.apache.flink.optimizer.plan.PlanNode.FeedbackPropertiesMeetRequirementsReport;
+import org.apache.flink.optimizer.traversals.InterestingPropertyVisitor;
 import org.apache.flink.optimizer.util.NoOpBinaryUdfOp;
 import org.apache.flink.optimizer.util.NoOpUnaryUdfOp;
 import org.apache.flink.runtime.operators.DriverStrategy;
@@ -59,52 +53,58 @@ import org.apache.flink.runtime.operators.util.LocalStrategy;
 import org.apache.flink.types.Nothing;
 import org.apache.flink.util.Visitor;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+
 /**
  * A node in the optimizer's program representation for a workset iteration.
  */
-public class WorksetIterationNode extends TwoInputNode implements IterationNode {
-	
+public class DatalogIterationNode extends TwoInputNode implements IterationNode {
+
 	private static final int DEFAULT_COST_WEIGHT = 20;
-	
-	
+
+
 	private final FieldList solutionSetKeyFields;
-	
+
 	private final GlobalProperties partitionedProperties;
-	
+
 	private final List<OperatorDescriptorDual> dataProperties;
-	
+
 	private SolutionSetNode solutionSetNode;
-	
+
 	private WorksetNode worksetNode;
-	
+
 	private OptimizerNode solutionSetDelta;
-	
+
 	private OptimizerNode nextWorkset;
 
 	private OptimizerNode datalogMerge;
-	
+
 	private DagConnection solutionSetDeltaRootConnection; // if datalogMerge != null then use datalogMergeRootConnection instead of this
-	
+
 	private DagConnection nextWorksetRootConnection; // if datalogMerge != null then use datalogMergeRootConnection instead of this
-	
+
 	private SingleRootJoiner singleRoot; // if datalogMerge != null then use datalogMerge instead of this
 
 	private DagConnection datalogMergeRootConnection;
-	
+
 	private boolean solutionDeltaImmediatelyAfterSolutionJoin;
-	
+
 	private final int costWeight;
 
 	// --------------------------------------------------------------------------------------------
-	
+
 	/**
 	 * Creates a new node with a single input for the optimizer plan.
-	 * 
+	 *
 	 * @param iteration The iteration operator that the node represents.
 	 */
-	public WorksetIterationNode(DeltaIterationBase<?, ?> iteration) {
+	public DatalogIterationNode(DeltaIterationBase<?, ?> iteration) {
 		super(iteration);
-		
+
 		final int[] ssKeys = iteration.getSolutionSetKeyFields();
 		if (ssKeys == null || ssKeys.length == 0) {
 			throw new CompilerException("Invalid WorksetIteration: No key fields defined for the solution set.");
@@ -112,36 +112,36 @@ public class WorksetIterationNode extends TwoInputNode implements IterationNode 
 		this.solutionSetKeyFields = new FieldList(ssKeys);
 		this.partitionedProperties = new GlobalProperties();
 		this.partitionedProperties.setHashPartitioned(this.solutionSetKeyFields);
-		
-		int weight = iteration.getMaximumNumberOfIterations() > 0 ? 
+
+		int weight = iteration.getMaximumNumberOfIterations() > 0 ?
 			iteration.getMaximumNumberOfIterations() : DEFAULT_COST_WEIGHT;
-			
+
 		if (weight > OptimizerNode.MAX_DYNAMIC_PATH_COST_WEIGHT) {
 			weight = OptimizerNode.MAX_DYNAMIC_PATH_COST_WEIGHT;
 		}
-		this.costWeight = weight; 
-		
+		this.costWeight = weight;
+
 		this.dataProperties = Collections.<OperatorDescriptorDual>singletonList(new WorksetOpDescriptor(this.solutionSetKeyFields));
 	}
 
 	// --------------------------------------------------------------------------------------------
-	
+
 	public DeltaIterationBase<?, ?> getIterationContract() {
 		return (DeltaIterationBase<?, ?>) getOperator();
 	}
-	
+
 	public SolutionSetNode getSolutionSetNode() {
 		return this.solutionSetNode;
 	}
-	
+
 	public WorksetNode getWorksetNode() {
 		return this.worksetNode;
 	}
-	
+
 	public OptimizerNode getNextWorkset() {
 		return this.nextWorkset;
 	}
-	
+
 	public OptimizerNode getSolutionSetDelta() {
 		return this.solutionSetDelta;
 	}
@@ -153,7 +153,7 @@ public class WorksetIterationNode extends TwoInputNode implements IterationNode 
 		this.solutionSetNode = solutionSetNode;
 		this.worksetNode = worksetNode;
 	}
-	
+
 	public void setNextPartialSolution(OptimizerNode solutionSetDelta, OptimizerNode nextWorkset,
 										ExecutionMode executionMode) {
 
@@ -167,7 +167,7 @@ public class WorksetIterationNode extends TwoInputNode implements IterationNode 
 				this.solutionDeltaImmediatelyAfterSolutionJoin = true;
 			}
 		}
-		
+
 		// there needs to be at least one node in the workset path, so
 		// if the next workset is equal to the workset, we need to inject a no-op node
 		if (nextWorkset == worksetNode || nextWorkset instanceof BinaryUnionNode) {
@@ -177,10 +177,10 @@ public class WorksetIterationNode extends TwoInputNode implements IterationNode 
 			DagConnection noOpConn = new DagConnection(nextWorkset, noop, executionMode);
 			noop.setIncomingConnection(noOpConn);
 			nextWorkset.addOutgoingConnection(noOpConn);
-			
+
 			nextWorkset = noop;
 		}
-		
+
 		// attach an extra node to the solution set delta for the cases where we need to repartition
 		UnaryOperatorNode solutionSetDeltaUpdateAux = new UnaryOperatorNode("Solution-Set Delta", getSolutionSetKeyFields(),
 				new SolutionSetDeltaOperator(getSolutionSetKeyFields()));
@@ -189,17 +189,17 @@ public class WorksetIterationNode extends TwoInputNode implements IterationNode 
 		DagConnection conn = new DagConnection(solutionSetDelta, solutionSetDeltaUpdateAux, executionMode);
 		solutionSetDeltaUpdateAux.setIncomingConnection(conn);
 		solutionSetDelta.addOutgoingConnection(conn);
-		
+
 		this.solutionSetDelta = solutionSetDeltaUpdateAux;
 		this.nextWorkset = nextWorkset;
-		
+
 		this.singleRoot = new SingleRootJoiner();
 		this.solutionSetDeltaRootConnection = new DagConnection(solutionSetDeltaUpdateAux,
 													this.singleRoot, executionMode);
 
 		this.nextWorksetRootConnection = new DagConnection(nextWorkset, this.singleRoot, executionMode);
 		this.singleRoot.setInputs(this.solutionSetDeltaRootConnection, this.nextWorksetRootConnection);
-		
+
 		solutionSetDeltaUpdateAux.addOutgoingConnection(this.solutionSetDeltaRootConnection);
 		nextWorkset.addOutgoingConnection(this.nextWorksetRootConnection);
 	}

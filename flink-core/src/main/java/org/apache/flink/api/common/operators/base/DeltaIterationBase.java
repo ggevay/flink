@@ -65,6 +65,8 @@ public class DeltaIterationBase<ST, WT> extends DualInputOperator<ST, WT, ST, Ab
 
 	private Operator<WT> nextWorkset;
 
+	private Operator<ST> datalogMerge;
+
 	/**
 	 * The positions of the keys in the solution tuple.
 	 */
@@ -177,6 +179,14 @@ public class DeltaIterationBase<ST, WT> extends DualInputOperator<ST, WT, ST, Ab
 	 */
 	public Operator<ST> getSolutionSetDelta() {
 		return this.solutionSetDelta;
+	}
+
+	public Operator<ST> getDatalogMerge() {
+		return datalogMerge;
+	}
+
+	public void setDatalogMerge(Operator<ST> datalogMerge) {
+		this.datalogMerge = datalogMerge;
 	}
 
 	// --------------------------------------------------------------------------------------------

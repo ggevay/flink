@@ -18,6 +18,7 @@
 
 package org.apache.flink.api.common.operators;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.InvalidProgramException;
@@ -378,6 +379,9 @@ public class CollectionExecutor {
 		}
 		if (iteration.getSolutionSetDelta() == null) {
 			throw new InvalidProgramException("The iteration " + iteration.getName() + " has no solution set delta defined (is not closed).");
+		}
+		if (iteration.getDatalogMerge() != null) {
+			throw new NotImplementedException("datalogMerge is not implemented for collection environment");
 		}
 		if (iteration.getNextWorkset() == null) {
 			throw new InvalidProgramException("The iteration " + iteration.getName() + " has no workset defined (is not closed).");

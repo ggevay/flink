@@ -253,11 +253,15 @@ public class OperatorTranslation {
 		translated.put(solutionSetPlaceHolder, iterationOperator.getSolutionSet());
 		translated.put(worksetPlaceHolder, iterationOperator.getWorkset());
 
-		Operator<D> translatedSolutionSet = translate(iterationEnd.getNextSolutionSet());
-		Operator<W> translatedWorkset = translate(iterationEnd.getNextWorkset());
-
-		iterationOperator.setNextWorkset(translatedWorkset);
-		iterationOperator.setSolutionSetDelta(translatedSolutionSet);
+		if (iterationEnd.getDatalogMerge() == null) {
+			Operator<D> translatedSolutionSet = translate(iterationEnd.getNextSolutionSet());
+			Operator<W> translatedWorkset = translate(iterationEnd.getNextWorkset());
+			iterationOperator.setNextWorkset(translatedWorkset);
+			iterationOperator.setSolutionSetDelta(translatedSolutionSet);
+		} else {
+			Operator<D> translatedDatalogMerge = translate(iterationEnd.getDatalogMerge());
+			iterationOperator.setDatalogMerge(translatedDatalogMerge);
+		}
 
 		iterationOperator.setInitialSolutionSet(translate(iterationHead.getInitialSolutionSet()));
 		iterationOperator.setInitialWorkset(translate(iterationHead.getInitialWorkset()));

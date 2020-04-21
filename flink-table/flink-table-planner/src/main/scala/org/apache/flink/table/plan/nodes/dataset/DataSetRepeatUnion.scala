@@ -68,6 +68,8 @@ class DataSetRepeatUnion(
     val config = tableEnv.getConfig
     val seedDs = seed.asInstanceOf[DataSetRel].translateToPlan(tableEnv, queryConfig)
 
+    val useDatalogMerge = config.getConfiguration.getBoolean("datalog-merge", true);
+
     val workingSet: DataSet[Row] = seedDs
     val solutionSet: DataSet[Row] = seedDs
 
@@ -75,14 +77,22 @@ class DataSetRepeatUnion(
     val iteration = solutionSet.iterateDelta(workingSet, maxIterations, (0 until seedDs.getType.getTotalFields): _*) //used maxIteration = Int.MaxValue to check if the iteration stops upon workingset getting emptied.
     updateCatalog(tableEnv, iteration.getWorkset, "__TEMP")
     val iterativeDs = iterative.asInstanceOf[DataSetRel].translateToPlan(tableEnv, queryConfig)
-    val delta = iterativeDs
-      .coGroup(iteration.getSolutionSet)
-      .where((0 until seedDs.getType.getTotalFields): _*)
-      .equalTo((0 until iteration.getWorkset.getType.getTotalFields): _*)
-      .`with`(new MinusCoGroupFunction[Row](false))
-      .withForwardedFieldsFirst("*")
-    val result = iteration.closeWith(delta, delta) //sending first parameter(solutionSet) delta means it will union it with solution set.
-    result
+
+    if (!useDatalogMerge) {
+
+      // Rely on standard Flink operators:
+      // Do a coGroup to get the difference from the solution set and deduplicate, and then merge new elements, and pass back as workset
+      val delta = iterativeDs
+        .coGroup(iteration.getSolutionSet)
+        .where((0 until seedDs.getType.getTotalFields): _*)
+        .equalTo((0 until iteration.getWorkset.getType.getTotalFields): _*)
+        .`with`(new MinusCoGroupFunction[Row](false))
+        .withForwardedFieldsFirst("*")
+      iteration.closeWith(delta, delta) //sending first parameter(solutionSet) delta means it will union it with solution set.
+
+    } else {
+      iteration.datalogMerge(iterativeDs)
+    }
   }
 
   private def updateCatalog(tableEnv: BatchTableEnvImpl, ds: DataSet[Row], tableName: String): Unit = {
