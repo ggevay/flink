@@ -19,7 +19,9 @@ package org.apache.flink.datalog.examples;
 
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
+import org.apache.flink.api.java.io.DiscardingOutputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.datalog.BatchDatalogEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
@@ -39,6 +41,13 @@ public class SameGeneration {
         String query = "sg(X,Y)?";
 
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+//        Configuration conf = new Configuration();
+//        conf.setString("taskmanager.memory.managed.size","8g"); //(8g orig), 1400m crashed, 1500m finishes // After memory management changes: 500m crashed, 600m finishes
+//        conf.setString("taskmanager.numberOfTaskSlots","6");
+//        conf.setBoolean("pipeline.object-reuse",true);
+//        conf.setBoolean("datalog-merge",true);
+//        ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment(conf);
+
         EnvironmentSettings settings = EnvironmentSettings
                 .newInstance()
                 .useDatalogPlanner()
@@ -52,8 +61,18 @@ public class SameGeneration {
         Table queryResult = datalogEnv.datalogQuery(inputProgram, query);
         DataSet<Tuple2<IntValue, IntValue>> resultDS = datalogEnv.toDataSet(queryResult, dataSet.getType());
 
+//        resultDS.output(new DiscardingOutputFormat<>());
+//        System.out.println(env.getExecutionPlan());
+
+
+
+        long start = System.currentTimeMillis();
+
         System.out.println(resultDS.count());
 //        resultDS.writeAsCsv(testFilePath + "_output");
 
+        long finish = System.currentTimeMillis();
+        long timeElapsed = finish - start;
+        System.out.println("Time: " + (double)timeElapsed/1000);
     }
 }
