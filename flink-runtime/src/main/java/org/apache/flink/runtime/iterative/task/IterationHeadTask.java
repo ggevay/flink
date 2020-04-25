@@ -185,12 +185,10 @@ public class IterationHeadTask<X, Y, S extends Function, OT> extends AbstractIte
 		TypeComparator<BT> solutionTypeComparator = solutionTypeComparatorFactory.createComparator();
 
 		InPlaceMutableHashTable<BT> hashTable = null;
-		List<MemorySegment> memSegments = null;
 		boolean success = false;
 		try {
 			int numPages = getMemoryManager().computeNumberOfPages(hashjoinMemorySize);
-			memSegments = getMemoryManager().allocatePages(getContainingTask(), numPages);
-			hashTable = new InPlaceMutableHashTable<>(solutionTypeSerializer, solutionTypeComparator, memSegments, getMemoryManager(), getContainingTask());
+			hashTable = new InPlaceMutableHashTable<>(solutionTypeSerializer, solutionTypeComparator, numPages, getMemoryManager(), getContainingTask());
 			success = true;
 			return hashTable;
 		} finally {
@@ -200,13 +198,6 @@ public class IterationHeadTask<X, Y, S extends Function, OT> extends AbstractIte
 						hashTable.close();
 					} catch (Throwable t) {
 						log.error("Error closing the solution set hash table after unsuccessful creation.", t);
-					}
-				}
-				if (memSegments != null) {
-					try {
-						getMemoryManager().release(memSegments);
-					} catch (Throwable t) {
-						log.error("Error freeing memory after error during solution set hash table creation.", t);
 					}
 				}
 			}

@@ -125,7 +125,6 @@ public class ReduceCombineDriver<T> implements Driver<ReduceFunction<T>, T> {
 		MemoryManager memManager = taskContext.getMemoryManager();
 		final int numMemoryPages = memManager.computeNumberOfPages(
 			taskContext.getTaskConfig().getRelativeMemoryDriver());
-		memory = memManager.allocatePages(taskContext.getContainingTask(), numMemoryPages);
 
 		ExecutionConfig executionConfig = taskContext.getExecutionConfig();
 		objectReuseEnabled = executionConfig.isObjectReuseEnabled();
@@ -136,6 +135,7 @@ public class ReduceCombineDriver<T> implements Driver<ReduceFunction<T>, T> {
 
 		switch (strategy) {
 			case SORTED_PARTIAL_REDUCE:
+				memory = memManager.allocatePages(taskContext.getContainingTask(), numMemoryPages);
 				// instantiate a fix-length in-place sorter, if possible, otherwise the out-of-place sorter
 				if (comparator.supportsSerializationWithKeyNormalization() &&
 					serializer.getLength() > 0 && serializer.getLength() <= THRESHOLD_FOR_IN_PLACE_SORTING) {
@@ -145,7 +145,7 @@ public class ReduceCombineDriver<T> implements Driver<ReduceFunction<T>, T> {
 				}
 				break;
 			case HASHED_PARTIAL_REDUCE:
-				table = new InPlaceMutableHashTable<T>(serializer, comparator, memory);
+				table = new InPlaceMutableHashTable<T>(serializer, comparator, numMemoryPages);
 				reduceFacade = table.new ReduceFacade(reducer, output, objectReuseEnabled);
 				break;
 			default:

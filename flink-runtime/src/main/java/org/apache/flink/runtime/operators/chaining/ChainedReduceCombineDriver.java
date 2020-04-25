@@ -112,13 +112,13 @@ public class ChainedReduceCombineDriver<T> extends ChainedDriver<T, T> {
 
 		MemoryManager memManager = parent.getEnvironment().getMemoryManager();
 		final int numMemoryPages = memManager.computeNumberOfPages(config.getRelativeMemoryDriver());
-		memory = memManager.allocatePages(parent, numMemoryPages);
 
 		LOG.debug("ChainedReduceCombineDriver object reuse: " + (objectReuseEnabled ? "ENABLED" : "DISABLED") + ".");
 
 		switch (strategy) {
 			case SORTED_PARTIAL_REDUCE:
 				// instantiate a fix-length in-place sorter, if possible, otherwise the out-of-place sorter
+				memory = memManager.allocatePages(parent, numMemoryPages);
 				if (comparator.supportsSerializationWithKeyNormalization() &&
 					serializer.getLength() > 0 && serializer.getLength() <= THRESHOLD_FOR_IN_PLACE_SORTING) {
 					sorter = new FixedLengthRecordSorter<T>(serializer, comparator.duplicate(), memory);
@@ -127,7 +127,7 @@ public class ChainedReduceCombineDriver<T> extends ChainedDriver<T, T> {
 				}
 				break;
 			case HASHED_PARTIAL_REDUCE:
-				table = new InPlaceMutableHashTable<T>(serializer, comparator, memory);
+				table = new InPlaceMutableHashTable<T>(serializer, comparator, numMemoryPages);
 				table.open();
 				reduceFacade = table.new ReduceFacade(reducer, outputCollector, objectReuseEnabled);
 				break;

@@ -119,7 +119,7 @@ public class InPlaceMutableHashTable<T> extends AbstractMutableHashTable<T> {
 	private MemoryManager memoryManager;
 	private Object memoryOwner;
 
-	private final int numAllMemorySegments;
+	private final int numAllMemorySegments; // This is our share, but we will grab more if we have to.
 
 	private final int segmentSize;
 
@@ -165,27 +165,22 @@ public class InPlaceMutableHashTable<T> extends AbstractMutableHashTable<T> {
 	 */
 	private boolean enableResize;
 
+	public InPlaceMutableHashTable(TypeSerializer<T> serializer, TypeComparator<T> comparator, int numAllMemorySegments, List<MemorySegment> initialSegments, MemoryManager memoryManager, Object memoryOwner) {
+		super(serializer, comparator);
 
-	public InPlaceMutableHashTable(TypeSerializer<T> serializer, TypeComparator<T> comparator, List<MemorySegment> memory, MemoryManager memoryManager, Object memoryOwner) {
-		this(serializer, comparator, memory);
 		this.memoryManager = memoryManager;
 		this.memoryOwner = memoryOwner;
-	}
 
-	public InPlaceMutableHashTable(TypeSerializer<T> serializer, TypeComparator<T> comparator, List<MemorySegment> memory) {
-		super(serializer, comparator);
-		this.numAllMemorySegments = memory.size();
-		this.freeMemorySegments = new ArrayList<>(memory);
+		this.numAllMemorySegments = numAllMemorySegments;
+		this.freeMemorySegments = new ArrayList<>(initialSegments);
 
 		// some sanity checks first
-		if (freeMemorySegments.size() < MIN_NUM_MEMORY_SEGMENTS) {
+		if (numAllMemorySegments < MIN_NUM_MEMORY_SEGMENTS) {
 			throw new IllegalArgumentException("Too few memory segments provided. InPlaceMutableHashTable needs at least " +
-				MIN_NUM_MEMORY_SEGMENTS + " memory segments.");
+					MIN_NUM_MEMORY_SEGMENTS + " memory segments.");
 		}
 
-		this.memoryManager = null;
-		this.memoryOwner = null;
-
+		getSomeMemoryIfNeeded();
 		// Get the size of the first memory segment and record it. All further buffers must have the same size.
 		// the size must also be a power of 2
 		segmentSize = freeMemorySegments.get(0).size();
@@ -207,6 +202,22 @@ public class InPlaceMutableHashTable<T> extends AbstractMutableHashTable<T> {
 		prober = new HashTableProber<>(buildSideComparator, new SameTypePairComparator<>(buildSideComparator));
 
 		enableResize = buildSideSerializer.getLength() == -1;
+	}
+
+	public InPlaceMutableHashTable(TypeSerializer<T> serializer, TypeComparator<T> comparator, int numAllMemorySegments, MemoryManager memoryManager, Object memoryOwner) {
+		this(serializer, comparator, numAllMemorySegments, new ArrayList<>(), memoryManager, memoryOwner);
+	}
+
+	public InPlaceMutableHashTable(TypeSerializer<T> serializer, TypeComparator<T> comparator, List<MemorySegment> memory) {
+		this(serializer, comparator, memory.size(), memory);
+	}
+
+	public InPlaceMutableHashTable(TypeSerializer<T> serializer, TypeComparator<T> comparator, int numAllMemorySegments) {
+		this(serializer, comparator, numAllMemorySegments, new ArrayList<>());
+	}
+
+	public InPlaceMutableHashTable(TypeSerializer<T> serializer, TypeComparator<T> comparator, int numAllMemorySegments, List<MemorySegment> initialSegments) {
+		this(serializer, comparator, numAllMemorySegments, new ArrayList<>(), null, null);
 	}
 
 	/**
@@ -275,6 +286,9 @@ public class InPlaceMutableHashTable<T> extends AbstractMutableHashTable<T> {
 
 		freeMemorySegments.addAll(stagingSegments);
 		stagingSegments.clear();
+
+		memoryManager.release(freeMemorySegments); // We have to release them ourselves, because our owner doesn't always know about them
+		freeMemorySegments.clear(); // We have to clear it, otherwise someone (the join stuff) might want to also release them (gets them through getFreeMemory)
 
 		numElements = 0;
 		holes = 0;
@@ -346,18 +360,22 @@ public class InPlaceMutableHashTable<T> extends AbstractMutableHashTable<T> {
 		bucketSegments = null;
 	}
 
-	private MemorySegment allocateSegment() {
-		int s = freeMemorySegments.size();
-		if (s > 0) {
-			return freeMemorySegments.remove(s - 1);
-		} else {
-			//return null;
+	void getSomeMemoryIfNeeded() {
+		if (freeMemorySegments.size() == 0) {
 			try {
-				return memoryManager.allocatePages(memoryOwner, 1).get(0);
-				// TODO: Check that it is not slow because of allocating one at a time
+				freeMemorySegments.addAll(memoryManager.allocatePages(memoryOwner, numAllMemorySegments / 10 + 1));
 			} catch (MemoryAllocationException e) {
-				return null;
+				// Ignore. (A compaction might still solve it.)
 			}
+		}
+	}
+
+	private MemorySegment allocateSegment() {
+		getSomeMemoryIfNeeded();
+		if (freeMemorySegments.size() == 0) {
+			return null; // we couldn't get more memory
+		} else {
+			return freeMemorySegments.remove(freeMemorySegments.size() - 1);
 		}
 	}
 
@@ -1153,11 +1171,11 @@ public class InPlaceMutableHashTable<T> extends AbstractMutableHashTable<T> {
 				   TypeComparator<BT> buildSideComparator,
 				   TypeComparator<PT> probeSideComparator,
 				   TypePairComparator<PT, BT> comparator,
-				   List<MemorySegment> memorySegments, IOManager ioManager,
+				   int numAllMemorySegments, IOManager ioManager,
 				   boolean useBitmapFilters,
 				   MemoryManager memoryManager, Object memoryOwner) {
 
-			ht = new InPlaceMutableHashTable<>(buildSideSerializer, buildSideComparator, memorySegments, memoryManager, memoryOwner);
+			ht = new InPlaceMutableHashTable<>(buildSideSerializer, buildSideComparator, numAllMemorySegments, memoryManager, memoryOwner);
 			prober = ht.getProber(probeSideComparator, comparator);
 
 			this.probeSideSerializer = probeSideSerializer;

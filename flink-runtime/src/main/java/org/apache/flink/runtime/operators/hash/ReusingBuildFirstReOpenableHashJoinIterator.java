@@ -71,11 +71,10 @@ public class ReusingBuildFirstReOpenableHashJoinIterator<V1, V2, O> extends Reus
 			boolean useBitmapFilters) throws MemoryAllocationException {
 		
 		final int numPages = memManager.computeNumberOfPages(memoryFraction);
-		final List<MemorySegment> memorySegments = memManager.allocatePages(ownerTask, numPages);
 		
 		return new InPlaceMutableHashTable.JoinFacade<BT, PT>(buildSideSerializer, probeSideSerializer,
 				buildSideComparator, probeSideComparator, pairComparator,
-				memorySegments, ioManager, useBitmapFilters, memManager, ownerTask);
+				numPages, ioManager, useBitmapFilters, memManager, ownerTask);
 	}
 	
 	/**

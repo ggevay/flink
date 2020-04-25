@@ -46,11 +46,10 @@ public class HashJoinIteratorBase {
 			boolean useBloomFilters) throws MemoryAllocationException {
 
 		final int numPages = memManager.computeNumberOfPages(memoryFraction);
-		final List<MemorySegment> memorySegments = memManager.allocatePages(ownerTask, numPages);
 		
 		return new InPlaceMutableHashTable.JoinFacade<BT, PT>(buildSideSerializer, probeSideSerializer,
 				buildSideComparator, probeSideComparator, pairComparator,
-				memorySegments, ioManager,
+				numPages, ioManager,
 				useBloomFilters, memManager, ownerTask);
 	}
 }
