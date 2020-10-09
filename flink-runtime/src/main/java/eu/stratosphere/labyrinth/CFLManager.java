@@ -563,13 +563,14 @@ public class CFLManager {
 
     // --------------------------------------------------------
 
+	private static final int maxPara = 400; // BitSet sizes
 
     private static final class BagStatus {
 
         public int numProduced = 0;
 		public boolean produceClosed = false;
 
-		public final BitSet producedSubtasks = new BitSet(200);
+		public final BitSet producedSubtasks = new BitSet(maxPara);
 
 		public final HashSet<BagID> inputs = new HashSet<>();
 		public final HashSet<BagID> inputTo = new HashSet<>();
@@ -584,7 +585,7 @@ public class CFLManager {
 		public int numConsumed = 0;
 		public boolean consumeClosed = false;
 
-		public final BitSet consumedSubtasks = new BitSet(200);
+		public final BitSet consumedSubtasks = new BitSet(maxPara);
 	}
 
     private final BagIdToObjectMap<BagStatus> bagStatuses = new BagIdToObjectMap<>();
@@ -770,7 +771,7 @@ public class CFLManager {
 			if (!s.produceClosed) {
 				boolean needMore = false;
 				// Ebbe rakjuk ossze az inputok consumedSubtasks-jait
-				BitSet needProduced = new BitSet(200);
+				BitSet needProduced = new BitSet(maxPara);
 				for (BagID inp : s.inputs) {
 					if (emptyBags.contains(inp)) {
 						// enelkul olyankor lenne gond, ha egy binaris operator egyik inputja ures, emiatt a closeInputBag
