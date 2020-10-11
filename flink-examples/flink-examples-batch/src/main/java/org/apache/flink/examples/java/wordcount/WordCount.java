@@ -21,6 +21,7 @@ package org.apache.flink.examples.java.wordcount;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
+import org.apache.flink.api.java.io.DiscardingOutputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.examples.java.wordcount.util.WordCountData;
@@ -78,15 +79,25 @@ public class WordCount {
 				.groupBy(0)
 				.sum(1);
 
-		// emit result
-		if (params.has("output")) {
-			counts.writeAsCsv(params.get("output"), "\n", " ");
-			// execute program
-			env.execute("WordCount Example");
-		} else {
-			System.out.println("Printing result to stdout. Use --output to specify output path.");
-			counts.print();
-		}
+		counts = counts.flatMap(new FlatMapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
+			@Override
+			public void flatMap(Tuple2<String, Integer> value, Collector<Tuple2<String, Integer>> out) throws Exception {
+				out.collect(value);
+			}
+		}).setParallelism(1);
+
+		counts.output(new DiscardingOutputFormat<>());
+		System.out.println(env.getExecutionPlan());
+
+//		// emit result
+//		if (params.has("output")) {
+//			counts.writeAsCsv(params.get("output"), "\n", " ");
+//			// execute program
+//			env.execute("WordCount Example");
+//		} else {
+//			System.out.println("Printing result to stdout. Use --output to specify output path.");
+//			counts.print();
+//		}
 
 	}
 
