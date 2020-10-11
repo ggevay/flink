@@ -21,6 +21,7 @@ package org.apache.flink.runtime.operators;
 
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.java.operators.DummyPerStepFlatMap;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.operators.util.metrics.CountingCollector;
 import org.apache.flink.util.Collector;
@@ -93,20 +94,27 @@ public class FlatMapDriver<IT, OT> implements Driver<FlatMapFunction<IT, OT>, OT
 		final FlatMapFunction<IT, OT> function = this.taskContext.getStub();
 		final Collector<OT> output = new CountingCollector<>(this.taskContext.getOutputCollector(), numRecordsOut);
 
-		if (objectReuseEnabled) {
-			IT record = this.taskContext.<IT>getInputSerializer(0).getSerializer().createInstance();
-
-
-			while (this.running && ((record = input.next(record)) != null)) {
-				numRecordsIn.inc();
-				function.flatMap(record, output);
+		if (function instanceof DummyPerStepFlatMap) {
+			// The next if is a workaround for the bug that setParallelism doesn't work inside iterations
+			if (this.taskContext.getContainingTask().getIndexInSubtaskGroup() == 0) {
+				function.flatMap(null, output);
 			}
 		} else {
-			IT record;
+			if (objectReuseEnabled) {
+				IT record = this.taskContext.<IT>getInputSerializer(0).getSerializer().createInstance();
 
-			while (this.running && ((record = input.next()) != null)) {
-				numRecordsIn.inc();
-				function.flatMap(record, output);
+
+				while (this.running && ((record = input.next(record)) != null)) {
+					numRecordsIn.inc();
+					function.flatMap(record, output);
+				}
+			} else {
+				IT record;
+
+				while (this.running && ((record = input.next()) != null)) {
+					numRecordsIn.inc();
+					function.flatMap(record, output);
+				}
 			}
 		}
 	}

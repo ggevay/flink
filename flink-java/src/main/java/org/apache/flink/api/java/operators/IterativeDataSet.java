@@ -24,11 +24,14 @@ import org.apache.flink.api.common.InvalidProgramException;
 import org.apache.flink.api.common.aggregators.Aggregator;
 import org.apache.flink.api.common.aggregators.AggregatorRegistry;
 import org.apache.flink.api.common.aggregators.ConvergenceCriterion;
+import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.operators.Operator;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.types.Value;
+import org.apache.flink.util.Collector;
 
 /**
  * The IterativeDataSet represents the start of an iteration. It is created from the DataSet that
@@ -143,6 +146,22 @@ public class IterativeDataSet<T> extends SingleInputOperator<T, T, IterativeData
 	@PublicEvolving
 	public AggregatorRegistry getAggregators() {
 		return aggregators;
+	}
+
+	/**
+	 * Returns the current superstep number as a 1-element DataSet.
+	 *
+	 * Note: this relies on a hacked FlatMapDriver that recognizes the DummyPerStepFlatMap marker interface.
+	 */
+	public DataSet<Integer> getSuperstepNumberAsDataSet() {
+		return flatMap(new SuperstepNumberFlatMapper<>());
+	}
+
+	private static class SuperstepNumberFlatMapper<T> extends RichFlatMapFunction<T, Integer> implements DummyPerStepFlatMap {
+		@Override
+		public void flatMap(T value, Collector<Integer> out) throws Exception {
+			out.collect(getIterationRuntimeContext().getSuperstepNumber());
+		}
 	}
 
 	// --------------------------------------------------------------------------------------------
