@@ -25,13 +25,21 @@ import org.apache.flink.api.common.aggregators.Aggregator;
 import org.apache.flink.api.common.aggregators.AggregatorRegistry;
 import org.apache.flink.api.common.aggregators.ConvergenceCriterion;
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
+import org.apache.flink.api.common.io.InputFormat;
+import org.apache.flink.api.common.io.RichInputFormat;
 import org.apache.flink.api.common.operators.Operator;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
+import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.types.Value;
 import org.apache.flink.util.Collector;
+
+import java.io.IOException;
+import java.util.function.Function;
 
 /**
  * The IterativeDataSet represents the start of an iteration. It is created from the DataSet that
@@ -161,6 +169,62 @@ public class IterativeDataSet<T> extends SingleInputOperator<T, T, IterativeData
 		@Override
 		public void flatMap(T value, Collector<Integer> out) throws Exception {
 			out.collect(getIterationRuntimeContext().getSuperstepNumber());
+		}
+	}
+
+	public <OT, IS extends InputSplit> DataSet<OT> readFile(MapFunction<Integer, InputFormat<OT, IS>> inputFormatFromSuperstepNumber, TypeInformation<OT> typeInfo) {
+		int para = getExecutionEnvironment().getParallelism();
+		TypeSerializer<OT> serializer = typeInfo.createSerializer(getExecutionEnvironment().getConfig());
+
+		DataSet<InputFormatWithInputSplit<OT, IS>> inputSplits = getSuperstepNumberAsDataSet().flatMap(new FlatMapFunction<Integer, InputFormatWithInputSplit<OT, IS>>() {
+			@Override
+			public void flatMap(Integer stepNum, Collector<InputFormatWithInputSplit<OT, IS>> out) throws Exception {
+				InputFormat<OT, IS> inputFormat = inputFormatFromSuperstepNumber.map(stepNum);
+				IS[] splits = inputFormat.createInputSplits(para);
+				for(IS inputSplit: splits) {
+					out.collect(new InputFormatWithInputSplit<>(inputFormat, inputSplit));
+				}
+			}
+		});
+
+		return inputSplits.rebalance().flatMap(new FlatMapFunction<InputFormatWithInputSplit<OT, IS>, OT>() {
+			@Override
+			public void flatMap(InputFormatWithInputSplit<OT, IS> ifwis, Collector<OT> out) throws Exception {
+				InputFormat<OT, IS> format = ifwis.inputFormat;
+				IS inputSplit = ifwis.inputSplit;
+
+				if (format instanceof RichInputFormat) {
+					((RichInputFormat<OT, IS>) format).openInputFormat();
+				}
+
+				format.open(inputSplit);
+
+				while (!format.reachedEnd()) {
+					OT nextElement = format.nextRecord(serializer.createInstance());
+					if (nextElement != null) {
+						out.collect(nextElement);
+					} else {
+						break;
+					}
+				}
+
+				format.close();
+
+				if (format instanceof RichInputFormat) {
+					((RichInputFormat<OT, IS>) format).closeInputFormat();
+				}
+			}
+		}).returns(typeInfo);
+	}
+
+	private static class InputFormatWithInputSplit<OT, IS extends InputSplit> {
+
+		public InputFormat<OT, IS> inputFormat;
+		public IS inputSplit;
+
+		public InputFormatWithInputSplit(InputFormat<OT, IS> inputFormat, IS inputSplit) {
+			this.inputFormat = inputFormat;
+			this.inputSplit = inputSplit;
 		}
 	}
 
