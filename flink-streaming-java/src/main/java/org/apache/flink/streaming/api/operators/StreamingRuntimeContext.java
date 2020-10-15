@@ -18,7 +18,7 @@
 
 package org.apache.flink.streaming.api.operators;
 
-import eu.stratosphere.labyrinth.CFLManager;
+import eu.stratosphere.mitos.CFLManager;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.functions.BroadcastVariableInitializer;

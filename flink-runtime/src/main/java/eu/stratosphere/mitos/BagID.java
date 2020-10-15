@@ -16,18 +16,37 @@
  * limitations under the License.
  */
 
-package eu.stratosphere.labyrinth;
+package eu.stratosphere.mitos;
+
+import org.apache.flink.core.memory.DataInputView;
+import org.apache.flink.core.memory.DataOutputView;
+
+import java.io.IOException;
 
 /**
  *
  */
-public class BagIDAndOpID {
+public final class BagID {
 
-	public BagID bagID;
+	public int cflSize;
 	public int opID;
 
-	public BagIDAndOpID(BagID bagID, int opID) {
-		this.bagID = bagID;
+
+	public void serialize(DataOutputView target) throws IOException {
+		target.writeInt(cflSize);
+		target.writeInt(opID);
+	}
+
+	public static void deserialize(BagID r, DataInputView src) throws IOException {
+		r.cflSize = src.readInt();
+		r.opID = src.readInt();
+	}
+
+
+	public BagID() {}
+
+	public BagID(int cflSize, int opID) {
+		this.cflSize = cflSize;
 		this.opID = opID;
 	}
 
@@ -36,16 +55,26 @@ public class BagIDAndOpID {
 		if (this == o) {return true;}
 		if (o == null || getClass() != o.getClass()) {return false;}
 
-		BagIDAndOpID that = (BagIDAndOpID) o;
+		BagID bagID = (BagID) o;
 
-		if (opID != that.opID) {return false;}
-		return bagID.equals(that.bagID);
+		if (cflSize != bagID.cflSize) {return false;}
+		if (opID != bagID.opID) {return false;}
+
+		return true;
 	}
 
 	@Override
 	public int hashCode() {
-		int result = bagID.hashCode();
+		int result = cflSize;
 		result = 31 * result + opID;
 		return result;
+	}
+
+	@Override
+	public String toString() {
+		return "BagID{" +
+				"cflSize=" + cflSize +
+				", opID=" + opID +
+				'}';
 	}
 }

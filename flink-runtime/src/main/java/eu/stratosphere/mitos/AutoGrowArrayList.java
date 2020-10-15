@@ -16,43 +16,36 @@
  * limitations under the License.
  */
 
-package eu.stratosphere.labyrinth;
+package eu.stratosphere.mitos;
 
-import org.apache.flink.core.memory.DataInputView;
-import org.apache.flink.core.memory.DataOutputView;
+import java.util.ArrayList;
 
-import java.io.IOException;
+final class AutoGrowArrayList<T> {
 
-/**
- *
- */
-public final class CFLElement {
+	private final ArrayList<T> a;
 
-	public int seqNum;
-	public int bbId;
-
-	public void serialize(DataOutputView target) throws IOException {
-		target.writeInt(seqNum);
-		target.writeInt(bbId);
+	AutoGrowArrayList(int s) {
+		a = new ArrayList<>(s);
 	}
 
-	public static void deserialize(CFLElement r, DataInputView src) throws IOException {
-		r.seqNum = src.readInt();
-		r.bbId = src.readInt();
+	T get(int i) {
+		ensureCapacity(i);
+		return a.get(i);
 	}
 
-	public CFLElement() {}
-
-	public CFLElement(int seqNum, int bbId) {
-		this.seqNum = seqNum;
-		this.bbId = bbId;
+	void put(int i, T v) {
+		ensureCapacity(i);
+		a.set(i, v);
 	}
 
-	@Override
-	public String toString() {
-		return "CFLElement{" +
-				"seqNum=" + seqNum +
-				", bbId=" + bbId +
-				'}';
+	void clear() {
+		a.clear();
+	}
+
+
+	private void ensureCapacity(int i) {
+		while (i >= a.size()) {
+			a.add(null);
+		}
 	}
 }

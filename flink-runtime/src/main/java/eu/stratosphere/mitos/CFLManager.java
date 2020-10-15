@@ -16,13 +16,11 @@
  * limitations under the License.
  */
 
-package eu.stratosphere.labyrinth;
+package eu.stratosphere.mitos;
 
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.core.memory.DataInputDeserializer;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
-import org.apache.flink.core.memory.DataOutputSerializer;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.taskmanager.TaskManager;
@@ -33,9 +31,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.ConnectException;
-import java.net.MulticastSocket;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;

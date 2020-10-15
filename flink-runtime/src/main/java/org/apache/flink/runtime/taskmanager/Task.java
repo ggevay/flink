@@ -18,7 +18,7 @@
 
 package org.apache.flink.runtime.taskmanager;
 
-import eu.stratosphere.labyrinth.CFLManager;
+import eu.stratosphere.mitos.CFLManager;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;

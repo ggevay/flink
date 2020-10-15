@@ -47,7 +47,7 @@ import org.apache.flink.streaming.runtime.streamstatus.StatusWatermarkValve;
 import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 import org.apache.flink.streaming.runtime.streamstatus.StreamStatusMaintainer;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
-import org.apache.flink.streaming.runtime.labyrinth.NoAutoClose;
+import org.apache.flink.streaming.runtime.mitos.NoAutoClose;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

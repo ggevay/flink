@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package eu.stratosphere.labyrinth;
+package eu.stratosphere.mitos;
 
 public class BagIDAndOpIDToObjectMap<T> {
 

@@ -16,36 +16,24 @@
  * limitations under the License.
  */
 
-package eu.stratosphere.labyrinth;
+package eu.stratosphere.mitos;
 
-import java.util.ArrayList;
+import java.util.List;
 
-final class AutoGrowArrayList<T> {
+/**
+ *
+ */
+public interface CFLCallback {
 
-	private final ArrayList<T> a;
+	// Note: always only one element is added
+	void notify(List<Integer> newCFL);
 
-	AutoGrowArrayList(int s) {
-		a = new ArrayList<>(s);
-	}
+	void notifyTerminalBB();
 
-	T get(int i) {
-		ensureCapacity(i);
-		return a.get(i);
-	}
+	void notifyCloseInput(BagID bagID, int opID); // todo: az implementacio-kor majd figyelni kell, hogy a ket input lehet ugyanaz a bag is
 
-	void put(int i, T v) {
-		ensureCapacity(i);
-		a.set(i, v);
-	}
-
-	void clear() {
-		a.clear();
-	}
+	void notifyBarrierAllReached(int cflSize);
 
 
-	private void ensureCapacity(int i) {
-		while (i >= a.size()) {
-			a.add(null);
-		}
-	}
+	int getOpID();
 }

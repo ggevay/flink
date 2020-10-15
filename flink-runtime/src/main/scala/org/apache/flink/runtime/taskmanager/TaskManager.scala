@@ -27,7 +27,7 @@ import java.util.{Collections, UUID}
 import _root_.akka.actor._
 import _root_.akka.pattern.ask
 import _root_.akka.util.Timeout
-import eu.stratosphere.labyrinth.CFLManager
+import eu.stratosphere.mitos.CFLManager
 import org.apache.flink.api.common.time.Time
 import grizzled.slf4j.Logger
 import org.apache.commons.lang3.exception.ExceptionUtils
@@ -219,7 +219,7 @@ class TaskManager(
     //ggg
     if (!config.cflManDeactivated) {
       import sys.process._
-      import eu.stratosphere.labyrinth._
+      import eu.stratosphere.mitos._
       //val curDir = ("pwd"!!).stripSuffix("\n")
       val hostName = ("hostname"!!).stripSuffix("\n")
 

@@ -16,31 +16,44 @@
  * limitations under the License.
  */
 
-package eu.stratosphere.labyrinth;
+package eu.stratosphere.mitos;
 
-public final class BagIdToObjectMap<T> {
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-    private final AutoGrowArrayList<AutoGrowArrayList<T>> map = new AutoGrowArrayList<>(3000);
+final class SeqNumAtomicBools {
 
-    T get(BagID bid) {
-        AutoGrowArrayList<T> innerMap = map.get(bid.cflSize);
-        if (innerMap == null) {
-            return null;
-        } else {
-            return innerMap.get(bid.opID);
+	private final ArrayList<AtomicBoolean> as;
+
+	SeqNumAtomicBools(int s) {
+		as = new ArrayList<>(s);
+		for (int j = 0; j < s; j++) {
+			as.add(new AtomicBoolean(false));
+		}
+	}
+
+	boolean getAndSet(int i) {
+		ensureCapacity(i);
+		AtomicBoolean a = as.get(i);
+		return a.getAndSet(true);
+	}
+
+	synchronized void clear() {
+	    for (AtomicBoolean a: as) {
+	        a.set(false);
         }
     }
 
-    void put(BagID bid, T v) {
-        AutoGrowArrayList<T> innerMap = map.get(bid.cflSize);
-        if (innerMap == null) {
-			innerMap = new AutoGrowArrayList<>(50);
-            map.put(bid.cflSize, innerMap);
-        }
-        innerMap.put(bid.opID, v);
-    }
-
-    void clear() {
-        map.clear();
-    }
+	private void ensureCapacity(int i) {
+		if (i >= as.size()) {
+			synchronized (this) {
+				if (i >= as.size()) {
+					int toAdd = as.size(); // Double the size
+					for (int j = 0; j < toAdd; j++) {
+						as.add(new AtomicBoolean(false));
+					}
+				}
+			}
+		}
+	}
 }

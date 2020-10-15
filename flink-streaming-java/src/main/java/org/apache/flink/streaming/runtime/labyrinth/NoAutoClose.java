@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.runtime.labyrinth;
+package org.apache.flink.streaming.runtime.mitos;
 
 /**
  * Marker interface for preventing Flink of closing the operator when the inputs run out.
