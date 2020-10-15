@@ -62,7 +62,7 @@ public class CFLManager {
 
 	private static final boolean logCoord = false;
 
-	public static final boolean barrier = true; // barrier between iteration steps
+	public static boolean barrier = false; // barrier between iteration steps
 
 	private static final int port = 4444;
 	//private static final int UDPPort = port + 1;
