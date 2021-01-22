@@ -66,10 +66,15 @@ public class CFLManager {
 	//public int numAllSlots = -1;
 	//public int numTaskSlotsPerTm = -1;
 
-	public CFLManager(TaskManager tm, String[] hosts, boolean coordinator) {
+	public final boolean checkpointingEnabled;
+	public final int checkpointInterval;
+
+	public CFLManager(TaskManager tm, String[] hosts, boolean coordinator, boolean checkpointingEnabled, int checkpointInterval) {
 		this.tm = tm;
 		this.hosts = hosts;
 		this.coordinator = coordinator;
+		this.checkpointingEnabled = checkpointingEnabled;
+		this.checkpointInterval = checkpointInterval;
 
 //		recvdSeqNums = new SeqNumAtomicBools(16384);
 //

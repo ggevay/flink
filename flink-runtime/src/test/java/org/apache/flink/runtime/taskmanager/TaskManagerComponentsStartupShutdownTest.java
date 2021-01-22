@@ -117,6 +117,8 @@ public class TaskManagerComponentsStartupShutdownTest extends TestLogger {
 			// create the components for the TaskManager manually
 			final TaskManagerConfiguration tmConfig = new TaskManagerConfiguration(
 				false,
+				false,
+				-1,
 				numberOfSlots,
 				TMP_DIR,
 				timeout,

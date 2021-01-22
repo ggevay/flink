@@ -228,7 +228,8 @@ class TaskManager(
         allHosts = scala.io.Source.fromFile(confDir + "/slaves").getLines().toArray
         assert(!allHosts.contains(""))
         //val hostsExceptMe = allHosts.filter(s => s != hostName)
-        cflManager = new CFLManager(this, allHosts, allHosts.head == hostName)
+        cflManager = new CFLManager(this, allHosts, allHosts.head == hostName,
+          config.mitosCheckpointingEnabled, config.mitosCheckpointInterval)
 
         if (!allHosts.contains(hostName)) {
           throw new RuntimeException(
@@ -242,7 +243,8 @@ class TaskManager(
 
         allHosts = Array("localhost")
 
-        cflManager = new CFLManager(this, allHosts, true)
+        cflManager = new CFLManager(this, allHosts, true,
+          config.mitosCheckpointingEnabled, config.mitosCheckpointInterval)
         //cflManager.tmId = 0
         //cflManager.numAllSlots = numberOfSlots
         //cflManager.numTaskSlotsPerTm = numberOfSlots
