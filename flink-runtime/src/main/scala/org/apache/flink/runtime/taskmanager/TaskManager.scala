@@ -234,18 +234,18 @@ class TaskManager(
           throw new RuntimeException(
             "A slaves fajlban a 'hostname' altal visszaadott neveknek kell lenniuk")
         }
-        cflManager.tmId = allHosts.indexOf(hostName).asInstanceOf[Byte]
-        cflManager.numAllSlots = allHosts.length * numberOfSlots
-        cflManager.numTaskSlotsPerTm = numberOfSlots
+        //cflManager.tmId = allHosts.indexOf(hostName).asInstanceOf[Byte]
+        //cflManager.numAllSlots = allHosts.length * numberOfSlots
+        //cflManager.numTaskSlotsPerTm = numberOfSlots
       } else {
         //local execution
 
         allHosts = Array("localhost")
 
         cflManager = new CFLManager(this, allHosts, true)
-        cflManager.tmId = 0
-        cflManager.numAllSlots = numberOfSlots
-        cflManager.numTaskSlotsPerTm = numberOfSlots
+        //cflManager.tmId = 0
+        //cflManager.numAllSlots = numberOfSlots
+        //cflManager.numTaskSlotsPerTm = numberOfSlots
 
         //tmp teszt:
         //CFLManager.create(Array[String]("localhost"))

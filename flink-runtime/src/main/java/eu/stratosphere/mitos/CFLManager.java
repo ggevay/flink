@@ -39,7 +39,6 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -62,9 +61,10 @@ public class CFLManager {
 	private static final int port = 4444;
 	//private static final int UDPPort = port + 1;
 
-	public byte tmId = -1;
-	public int numAllSlots = -1;
-	public int numTaskSlotsPerTm = -1;
+	// These are not used at the moment. (They were set in TaskManager.scala.)
+	//public byte tmId = -1;
+	//public int numAllSlots = -1;
+	//public int numTaskSlotsPerTm = -1;
 
 	public CFLManager(TaskManager tm, String[] hosts, boolean coordinator) {
 		this.tm = tm;
@@ -96,7 +96,7 @@ public class CFLManager {
 
 	private final TaskManager tm;
 
-	private final boolean coordinator;
+	private final boolean coordinator; // We are the coordinator among the CFLManagers (0th in the slaves file)
 
 	private final String[] hosts;
 
@@ -150,6 +150,7 @@ public class CFLManager {
 
 	private JobID jobID = null;
 
+	@SuppressWarnings("BusyWait")
 	private void createSenderConnections() {
 		final int timeout = 500;
 		int i = 0;
@@ -305,12 +306,14 @@ public class CFLManager {
 			thread.start();
 		}
 
+		@SuppressWarnings("BusyWait")
 		@Override
 		public void run() {
 			try {
 				try {
 					InputStream ins = new BufferedInputStream(socket.getInputStream(), 32768);
 					DataInputViewStreamWrapper divsw = new DataInputViewStreamWrapper(ins);
+					//noinspection InfiniteLoopStatement
 					while (true) {
 
 						// Vigyazat, itt lenyeges, hogy a reuse minden fieldje null!
@@ -410,12 +413,7 @@ public class CFLManager {
 	private synchronized void notifyCallbacks() {
 		if (callbacks.size() != prevCallbacksSize) {
 			prevCallbacksSize = callbacks.size();
-			callbacks.sort(new Comparator<CFLCallback>() {
-				@Override
-				public int compare(CFLCallback o1, CFLCallback o2) {
-					return -Integer.compare(o1.getOpID(), o2.getOpID());
-				}
-			});
+			callbacks.sort((o1, o2) -> -Integer.compare(o1.getOpID(), o2.getOpID()));
 		}
 
 		ArrayList<Integer> CFLToPass = new ArrayList<>(curCFL);
