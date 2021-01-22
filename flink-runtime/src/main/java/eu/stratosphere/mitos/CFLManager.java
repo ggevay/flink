@@ -94,14 +94,14 @@ public class CFLManager {
 		createSenderConnections();
 	}
 
-	private TaskManager tm;
+	private final TaskManager tm;
 
-	private boolean coordinator;
+	private final boolean coordinator;
 
-	private String[] hosts;
+	private final String[] hosts;
 
-	private OutputStream[] senderStreams;
-	private DataOutputViewStreamWrapper[] senderDataOutputViews;
+	private final OutputStream[] senderStreams;
+	private final DataOutputViewStreamWrapper[] senderDataOutputViews;
 
 	private volatile boolean allSenderUp = false;
 	private volatile boolean allIncomingUp = false;
@@ -112,10 +112,10 @@ public class CFLManager {
 //	private final UDPReceiver udpReceiver;
 //	private final SeqNumAtomicBools recvdSeqNums;
 
-	private List<Integer> tentativeCFL = new ArrayList<>(); // ez lehet lyukas, ha nem sorrendben erkeznek meg az elemek
-	private List<Integer> curCFL = new ArrayList<>(); // ez sosem lyukas // could be changed to fastutils IntArrayList
+	private final List<Integer> tentativeCFL = new ArrayList<>(); // ez lehet lyukas, ha nem sorrendben erkeznek meg az elemek
+	private final List<Integer> curCFL = new ArrayList<>(); // ez sosem lyukas // could be changed to fastutils IntArrayList
 
-	private List<CFLCallback> callbacks = new ArrayList<>();
+	private final List<CFLCallback> callbacks = new ArrayList<>();
 
 	private int terminalBB = -1;
 	private int numSubscribed = 0;
