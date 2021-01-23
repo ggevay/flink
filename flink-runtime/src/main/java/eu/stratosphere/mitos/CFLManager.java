@@ -199,7 +199,7 @@ public class CFLManager {
 		allSenderUp = true;
 	}
 
-	private void sendElement(CFLElement e) {
+	private void sendElement(CFLElements e) {
 		try {
 			final Msg msg = new Msg(jobCounter, e);
 
@@ -340,9 +340,9 @@ public class CFLManager {
 								Thread.sleep(100);
 							}
 
-							if (msg.cflElement != null) {
+							if (msg.cflElements != null) {
 								//if (!recvdSeqNums.getAndSet(msg.cflElement.seqNum)) {
-									addTentative(msg.cflElement.seqNum, msg.cflElement.bbId); // will do the callbacks
+									addTentative(msg.cflElements); // will do the callbacks
 								//}
 							} else if (msg.consumed != null) {
 								assert coordinator;
@@ -380,22 +380,32 @@ public class CFLManager {
 		}
 	}
 
-	private synchronized void addTentative(int seqNum, int bbId) {
+	private synchronized void addTentative(CFLElements cflElements) {
 //		if (LOG.isInfoEnabled()) {
 //			LOG.info("addTentative(" + seqNum + ", " + bbId + ")");
 //		}
 
-		while (seqNum >= tentativeCFL.size()) {
+		int[] bbIds = cflElements.bbIds;
+		int firstSeqNum = cflElements.seqNum;
+		int lastSeqNum = firstSeqNum + bbIds.length - 1;
+
+		// Fill tentativeCFL with nulls up until lastSeqNum:
+		while (lastSeqNum >= tentativeCFL.size()) {
 			tentativeCFL.add(null);
 			// Vigyazat, a kov. if-et nem lehetne max-szal kivaltani, mert akkor osszeakadhatnank
 			// az appendToCFL-ben levo inkrementalassal.
-			if (seqNum + 1 > cflSendSeqNum) {
-				cflSendSeqNum = seqNum + 1;
+			// Amugy ezt a kommentet kozben nem ertem: if-fel miert is nincs ugyanugy szinkronizalasi problema?
+			if (lastSeqNum + 1 > cflSendSeqNum) {
+				cflSendSeqNum = lastSeqNum + 1;
 			}
 		}
-		assert tentativeCFL.get(seqNum) == null || tentativeCFL.get(seqNum).equals(bbId);
-		tentativeCFL.set(seqNum, bbId);
+		// Set the newly got bbIds in tentativeCFL
+		for (int i = 0; i < bbIds.length; i++) {
+			assert tentativeCFL.get(firstSeqNum + i) == null || tentativeCFL.get(firstSeqNum + i).equals(bbIds[i]);
+			tentativeCFL.set(firstSeqNum + i, bbIds[i]);
+		}
 
+		// Append to curCFL from tentativeCFL until the first hole in tentativeCFL
 		for (int i = curCFL.size(); i < tentativeCFL.size(); i++) {
 			Integer t = tentativeCFL.get(i);
 			if (t == null)
@@ -441,7 +451,7 @@ public class CFLManager {
 	// --------------------------------------------------------
 
 	// A helyi TM-ben futo operatorok hivjak
-	public void appendToCFL(int bbId) {
+	public void appendToCFL(int[] bbId) {
 		synchronized (msgSendLock) {
 
 			// Ugyebar ha valaki appendel a CFL-hez, akkor mindig biztos a dolgaban.
@@ -453,8 +463,8 @@ public class CFLManager {
 			// addTentative-val olyankor, amikor egymas utan tobb appendToCFL-t hiv valaki.
 			//assert tentativeCFL.size() == curCFL.size();
 
-			if (LOG.isInfoEnabled()) LOG.info("Adding " + bbId + " to CFL (appendToCFL) " + System.currentTimeMillis());
-			sendElement(new CFLElement(cflSendSeqNum++, bbId));
+			if (LOG.isInfoEnabled()) LOG.info("Adding " + Arrays.toString(bbId) + " to CFL (appendToCFL) " + System.currentTimeMillis());
+			sendElement(new CFLElements(cflSendSeqNum++, bbId));
 		}
 	}
 
@@ -921,7 +931,7 @@ public class CFLManager {
 		public short jobCounter;
 
 		// These are nullable, and exactly one should be non-null
-		public CFLElement cflElement;
+		public CFLElements cflElements;
 		public Consumed consumed;
 		public Produced produced;
 		public CloseInputBag closeInputBag;
@@ -935,9 +945,9 @@ public class CFLManager {
 
 			target.writeShort(jobCounter);
 
-			if (cflElement != null) {
+			if (cflElements != null) {
 				target.writeByte(0);
-				cflElement.serialize(target);
+				cflElements.serialize(target);
 			} else if (consumed != null) {
 				target.writeByte(1);
 				consumed.serialize(target);
@@ -972,8 +982,8 @@ public class CFLManager {
 			byte c = src.readByte();
 			switch (c) {
 				case 0:
-					r.cflElement = new CFLElement();
-					CFLElement.deserialize(r.cflElement, src);
+					r.cflElements = new CFLElements();
+					CFLElements.deserialize(r.cflElements, src);
 					break;
 				case 1:
 					r.consumed = new Consumed();
@@ -1010,7 +1020,7 @@ public class CFLManager {
 		void assertOK() {
 			int c = 0;
 
-			if (cflElement != null) c++;
+			if (cflElements != null) c++;
 			if (consumed != null) c++;
 			if (produced != null) c++;
 			if (closeInputBag != null) c++;
@@ -1027,9 +1037,9 @@ public class CFLManager {
 
 		public Msg() {}
 
-		public Msg(short jobCounter, CFLElement cflElement) {
+		public Msg(short jobCounter, CFLElements cflElements) {
 			this.jobCounter = jobCounter;
-			this.cflElement = cflElement;
+			this.cflElements = cflElements;
 		}
 
 		public Msg(short jobCounter, Consumed consumed) {
@@ -1071,7 +1081,7 @@ public class CFLManager {
 		public String toString() {
 			return "Msg{" +
 					"jobCounter=" + jobCounter +
-					", cflElement=" + cflElement +
+					", cflElement=" + cflElements +
 					", consumed=" + consumed +
 					", produced=" + produced +
 					", closeInputBag=" + closeInputBag +
