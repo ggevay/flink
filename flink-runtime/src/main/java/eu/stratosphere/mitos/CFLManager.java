@@ -407,33 +407,28 @@ public class CFLManager {
 
 		// Append to curCFL from tentativeCFL until the first hole in tentativeCFL
 		for (int i = curCFL.size(); i < tentativeCFL.size(); i++) {
-			Integer t = tentativeCFL.get(i);
-			if (t == null)
+			Integer b = tentativeCFL.get(i);
+			if (b == null)
 				break;
-			curCFL.add(t);
+			curCFL.add(b);
 			if (LOG.isInfoEnabled()) {
-				LOG.info("Adding BBID " + t + " to CFL " + System.currentTimeMillis());
+				LOG.info("Adding BBID " + b + " to CFL " + System.currentTimeMillis());
 			}
-			notifyCallbacks();
+			notifyCallbacks(b);
 			// szoval minden elemnel kuldunk kulon, tehat a subscribereknek sok esetben eleg lehet az utolso elemet nezni
 		}
 	}
 
-	private boolean shouldNotifyTerminalBB() {
-		return curCFL.size() > 0 && curCFL.get(curCFL.size() - 1) == terminalBB;
-	}
-
 	private int prevCallbacksSize = -1;
 
-	private synchronized void notifyCallbacks() {
+	private synchronized void notifyCallbacks(int b) {
 		if (callbacks.size() != prevCallbacksSize) {
 			prevCallbacksSize = callbacks.size();
 			callbacks.sort((o1, o2) -> -Integer.compare(o1.getOpID(), o2.getOpID()));
 		}
 
-		ArrayList<Integer> CFLToPass = new ArrayList<>(curCFL);
 		for (CFLCallback cb: callbacks) {
-			cb.notify(CFLToPass);
+			cb.notifyCFLElement(b);
 		}
 
 		assert callbacks.size() == 0 || terminalBB != -1; // A drivernek be kell allitania a job elindulasa elott. Viszont ebbe a fieldbe a BagOperatorHost.setup-ban kerul.
@@ -445,6 +440,10 @@ public class CFLManager {
 				cb.notifyTerminalBB();
 			}
 		}
+	}
+
+	private boolean shouldNotifyTerminalBB() {
+		return curCFL.size() > 0 && curCFL.get(curCFL.size() - 1) == terminalBB;
 	}
 
 
@@ -477,11 +476,8 @@ public class CFLManager {
 		callbacks.add(cb);
 
 		// Egyenkent elkuldjuk a notificationt mindegyik eddigirol
-		List<Integer> tmpCfl = new ArrayList<>();
-		for(Integer x: curCFL) {
-			tmpCfl.add(x);
-			ArrayList<Integer> CFLToPass = new ArrayList<>(tmpCfl);
-			cb.notify(CFLToPass);
+		for(Integer b: curCFL) {
+			cb.notifyCFLElement(b);
 		}
 
 		assert terminalBB != -1; // a drivernek be kell allitania a job elindulasa elott
