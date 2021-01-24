@@ -49,6 +49,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntConsumer;
 
@@ -161,7 +162,6 @@ public final class CFLManager {
 	private boolean checkpointingEnabled;
 	private int checkpointInterval;
 	private String checkpointDir;
-	public static String defaultCheckpointDir = "/tmp/mitos-checkpoints"; // For only when checkpointing is enabled programmatically
 
 	public boolean isCheckpointingEnabled() {
 		return checkpointingEnabled;
@@ -442,6 +442,7 @@ public final class CFLManager {
 			tentativeCFL.set(firstSeqNum + i, bbIds[i]);
 		}
 
+		List<Integer> snapshotsToSetCFL = new ArrayList<>();
 		// Append to curCFL from tentativeCFL until the first hole in tentativeCFL
 		for (int i = curCFL.size(); i < tentativeCFL.size(); i++) {
 			Integer b = tentativeCFL.get(i);
@@ -451,8 +452,19 @@ public final class CFLManager {
 			if (LOG.isInfoEnabled()) {
 				LOG.info("Adding BBID " + b + " to CFL " + System.currentTimeMillis());
 			}
+
+			decideCheckpoint(curCFL.size());
+			int prev = curCFL.size() - 1;
+			if (prev > 0 && checkpointDecisions.get(prev)) { // > 0 is correct here: we don't want a decision for cflSize == 0
+				snapshotsToSetCFL.add(prev);
+			}
+
 			notifyCallbacks(b);
 			// szoval minden elemnel kuldunk kulon, tehat a subscribereknek sok esetben eleg lehet az utolso elemet nezni
+		}
+
+		for (Integer i: snapshotsToSetCFL) {
+			writeCurCflToSnapshot(i);
 		}
 	}
 
@@ -465,7 +477,7 @@ public final class CFLManager {
 		}
 
 		for (CFLCallback cb: callbacks) {
-			cb.notifyCFLElement(b, decideCheckpoint(curCFL.size()));
+			cb.notifyCFLElement(b, checkpointDecisions.get(curCFL.size()));
 		}
 
 		assert callbacks.size() == 0 || terminalBB != -1; // A drivernek be kell allitania a job elindulasa elott. Viszont ebbe a fieldbe a BagOperatorHost.setup-ban kerul.
@@ -488,29 +500,48 @@ public final class CFLManager {
 
 	static final class Snapshot {
 		public AtomicInteger opsCompleted = new AtomicInteger(0);
+		public AtomicBoolean cflWritten = new AtomicBoolean(false);
 	}
 
-	private synchronized boolean decideCheckpoint(int cflSize) {
+	private synchronized void decideCheckpoint(int cflSize) {
 		// Note: cflSize has to be given as a parameter
 		// Note: it's NOT index. Index would be cflSize - 1.
 
-		if (!checkpointingEnabled) {
-			return false;
-		} else {
-			if (checkpointDecisions.get(cflSize) == null) {
-				boolean decision = cflSize % checkpointInterval == 0;
-				checkpointDecisions.put(cflSize, decision);
-				if (decision) {
-					snapshots.put(cflSize, new Snapshot());
-					Path dir = getPathForCheckpointId(cflSize);
-					try {
-						snapshotFS.mkdirs(dir);
-					} catch (IOException e) {
-						throw new RuntimeException(e);
-					}
-				}
+		assert checkpointDecisions.get(cflSize) == null;
+
+		boolean decision = isCheckpointingEnabled() && cflSize % checkpointInterval == 0;
+		checkpointDecisions.put(cflSize, decision);
+		if (decision) {
+			initSnapshot(cflSize);
+		}
+	}
+
+	private void initSnapshot(int cflSize) {
+		snapshots.put(cflSize, new Snapshot());
+
+		Path dir = getPathForCheckpointId(cflSize);
+		try {
+			snapshotFS.mkdirs(dir);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private void writeCurCflToSnapshot(int cflSize) {
+		try {
+			Path dir = getPathForCheckpointId(cflSize);
+			FSDataOutputStream stream = snapshotFS.create(getCflPathFromSnapshotDir(dir), FileSystem.WriteMode.NO_OVERWRITE);
+			DataOutputView dataOutputView = new DataOutputViewStreamWrapper(stream);
+			dataOutputView.writeInt(curCFL.size());
+			for (Integer b: curCFL) {
+				dataOutputView.writeInt(b);
 			}
-			return checkpointDecisions.get(cflSize);
+			stream.close();
+			snapshots.get(cflSize).cflWritten.set(true);
+
+			checkSnapshotCompleteAndFinalize(cflSize);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -520,19 +551,18 @@ public final class CFLManager {
 	public Path getCompletedPathForCheckpointId(int id) {
 		return new Path(getCheckpointDir() + "/" + id + "-complete");
 	}
+	public Path getCflPathFromSnapshotDir(Path dir) {
+		return new Path(dir + "/cfl");
+	}
 
 	public FileSystem snapshotFS;
 
-	public synchronized void initSnapshotting() {
+	public synchronized void initSnapshotting() { //todo: make it return a boolean to decide whether to appendToCFL(kickoffBBs)
 		LOG.info("initSnapshotting() -- " +
 			"checkpointingEnabled: " + checkpointingEnabled + ", " +
 			"checkpointInterval: " + checkpointInterval + ", " +
 			"checkpointDir: " + resolveNull(checkpointDir));
 		if (checkpointingEnabled) {
-			if (checkpointDir == null) {
-				checkpointDir = defaultCheckpointDir;
-				LOG.warn("Setting default checkpointDir: " + checkpointDir);
-			}
 			//TODO
 			// - figyelni, hogy bizonyos dolgok itt csak akkor kellenek ha coordinator vagyunk
 			try {
@@ -544,12 +574,19 @@ public final class CFLManager {
 				if (true) { // TODO: dontes, hogy normal indulas vagy snapshotbol. Lehet, hogy ugy kene, hogy megnezzuk, hogy van-e dir (vagyis a fentebbit bemozgatni a then agba)
 
 				} else {
-					assert false; //todo
+					startFromSnapshot();
 				}
 			} catch (IOException | URISyntaxException e) {
 				throw new RuntimeException(e);
 			}
 		}
+	}
+
+	private synchronized void startFromSnapshot() {
+		//todo:
+		// 1. Tell BagOps to read snapshot
+		// 2. Read CFL
+		// 3. Tell the CFL to the BagOps
 	}
 
 	private String resolveNull(String str) {
@@ -590,7 +627,7 @@ public final class CFLManager {
 
 		// Egyenkent elkuldjuk a notificationt mindegyik eddigirol
 		for (int i = 0; i < curCFL.size(); i++) {
-			cb.notifyCFLElement(curCFL.get(i), decideCheckpoint(i + 1));
+			cb.notifyCFLElement(curCFL.get(i), checkpointDecisions.get(i + 1));
 		}
 
 		assert terminalBB != -1; // a drivernek be kell allitania a job elindulasa elott
@@ -1040,14 +1077,20 @@ public final class CFLManager {
 		sendToCoordinator(new Msg(jobCounter, new OpSnapshotComplete(checkpointId)));
 	}
 
-	private void operatorSnapshotCompleteRemote(int checkpointId) {
+	private void operatorSnapshotCompleteRemote(int checkpointId) { //todo: logging
 		assert checkpointDecisions.get(checkpointId) != null;
 		assert checkpointDecisions.get(checkpointId);
 
-		int numCompleted = snapshots.get(checkpointId).opsCompleted
-				.incrementAndGet();
+		snapshots.get(checkpointId).opsCompleted.incrementAndGet();
 
-		if (numCompleted == numToSubscribe) {
+		checkSnapshotCompleteAndFinalize(checkpointId);
+	}
+
+	private void checkSnapshotCompleteAndFinalize(int checkpointId) {
+		Snapshot s = snapshots.get(checkpointId);
+		if (s.opsCompleted.get() == numToSubscribe &&
+			s.cflWritten.get()
+		) {
 			try {
 				// Rename snapshot dir:
 				snapshotFS.rename(getPathForCheckpointId(checkpointId), getCompletedPathForCheckpointId(checkpointId));
