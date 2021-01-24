@@ -22,7 +22,7 @@ package eu.stratosphere.mitos;
  */
 public interface CFLCallback {
 
-	void notifyCFLElement(int cflElement);
+	void notifyCFLElement(int cflElement, boolean checkpoint);
 
 	void notifyTerminalBB();
 

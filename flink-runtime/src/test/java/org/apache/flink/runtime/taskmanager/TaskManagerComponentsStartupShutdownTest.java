@@ -119,6 +119,7 @@ public class TaskManagerComponentsStartupShutdownTest extends TestLogger {
 				false,
 				false,
 				-1,
+				null,
 				numberOfSlots,
 				TMP_DIR,
 				timeout,

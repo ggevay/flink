@@ -19,6 +19,8 @@
 package eu.stratosphere.mitos;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.core.fs.FileSystem;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.core.memory.DataOutputView;
@@ -36,6 +38,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -66,15 +70,13 @@ public class CFLManager {
 	//public int numAllSlots = -1;
 	//public int numTaskSlotsPerTm = -1;
 
-	public final boolean checkpointingEnabled;
-	public final int checkpointInterval;
-
-	public CFLManager(TaskManager tm, String[] hosts, boolean coordinator, boolean checkpointingEnabled, int checkpointInterval) {
+	public CFLManager(TaskManager tm, String[] hosts, boolean coordinator, boolean checkpointingEnabled, int checkpointInterval, String checkpointDir) {
 		this.tm = tm;
 		this.hosts = hosts;
 		this.coordinator = coordinator;
 		this.checkpointingEnabled = checkpointingEnabled;
 		this.checkpointInterval = checkpointInterval;
+		this.checkpointDir = checkpointDir;
 
 //		recvdSeqNums = new SeqNumAtomicBools(16384);
 //
@@ -154,6 +156,38 @@ public class CFLManager {
 	}
 
 	private JobID jobID = null;
+
+	private boolean checkpointingEnabled;
+	private int checkpointInterval;
+	private String checkpointDir;
+	public static String defaultCheckpointDir = "/tmp/mitos-checkpoints"; // For only when checkpointing is enabled programmatically
+
+	public boolean isCheckpointingEnabled() {
+		return checkpointingEnabled;
+	}
+
+	public void setCheckpointingEnabled(boolean checkpointingEnabled) {
+		assert curCFL.size() == 0;
+		this.checkpointingEnabled = checkpointingEnabled;
+	}
+
+	public int getCheckpointInterval() {
+		return checkpointInterval;
+	}
+
+	public void setCheckpointInterval(int checkpointInterval) {
+		assert curCFL.size() == 0;
+		this.checkpointInterval = checkpointInterval;
+	}
+
+	public String getCheckpointDir() {
+		return checkpointDir;
+	}
+
+	public void setCheckpointDir(String checkpointDir) {
+		assert curCFL.size() == 0;
+		this.checkpointDir = checkpointDir;
+	}
 
 	@SuppressWarnings("BusyWait")
 	private void createSenderConnections() {
@@ -428,7 +462,7 @@ public class CFLManager {
 		}
 
 		for (CFLCallback cb: callbacks) {
-			cb.notifyCFLElement(b);
+			cb.notifyCFLElement(b, decideCheckpoint(curCFL.size()));
 		}
 
 		assert callbacks.size() == 0 || terminalBB != -1; // A drivernek be kell allitania a job elindulasa elott. Viszont ebbe a fieldbe a BagOperatorHost.setup-ban kerul.
@@ -446,6 +480,47 @@ public class CFLManager {
 		return curCFL.size() > 0 && curCFL.get(curCFL.size() - 1) == terminalBB;
 	}
 
+	private boolean decideCheckpoint(int cflSize) { // Note: it's NOT index. Index would be cflSize - 1.
+		// Note: cflSize has to be given as a parameter
+		return checkpointingEnabled && cflSize % checkpointInterval == 0;
+	}
+
+	public void initSnapshotting() {
+		LOG.info("initSnapshotting() -- " +
+			"checkpointingEnabled: " + checkpointingEnabled + ", " +
+			"checkpointInterval: " + checkpointInterval + ", " +
+			"checkpointDir: " + resolveNull(checkpointDir));
+		if (checkpointingEnabled) {
+			if (checkpointDir == null) {
+				checkpointDir = defaultCheckpointDir;
+				LOG.warn("Setting default checkpointDir: " + checkpointDir);
+			}
+			//TODO
+			// - figyelni, hogy bizonyos dolgok itt csak akkor kellenek ha coordinator vagyunk
+			try {
+				FileSystem fs = FileSystem.get(new URI(checkpointDir));
+				Path checkpointDirPath = new Path(checkpointDir);
+				if (coordinator) {
+					fs.mkdirs(checkpointDirPath);
+				}
+				if (true) { // TODO: dontes, hogy normal indulas vagy snapshotbol
+					//TODO: - create a dir for the job
+				} else {
+					assert false; //todo
+				}
+			} catch (IOException | URISyntaxException e) {
+				throw new RuntimeException(e);
+			}
+		}
+	}
+
+	private String resolveNull(String str) {
+		if (str == null) {
+			return "null";
+		} else {
+			return str;
+		}
+	}
 
 	// --------------------------------------------------------
 
@@ -476,8 +551,8 @@ public class CFLManager {
 		callbacks.add(cb);
 
 		// Egyenkent elkuldjuk a notificationt mindegyik eddigirol
-		for(Integer b: curCFL) {
-			cb.notifyCFLElement(b);
+		for (int i = 0; i < curCFL.size(); i++) {
+			cb.notifyCFLElement(curCFL.get(i), decideCheckpoint(i + 1));
 		}
 
 		assert terminalBB != -1; // a drivernek be kell allitania a job elindulasa elott

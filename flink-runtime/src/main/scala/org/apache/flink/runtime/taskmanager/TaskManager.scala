@@ -229,7 +229,7 @@ class TaskManager(
         assert(!allHosts.contains(""))
         //val hostsExceptMe = allHosts.filter(s => s != hostName)
         cflManager = new CFLManager(this, allHosts, allHosts.head == hostName,
-          config.mitosCheckpointingEnabled, config.mitosCheckpointInterval)
+          config.mitosCheckpointingEnabled, config.mitosCheckpointInterval, config.mitosCheckpointDir)
 
         if (!allHosts.contains(hostName)) {
           throw new RuntimeException(
@@ -244,7 +244,7 @@ class TaskManager(
         allHosts = Array("localhost")
 
         cflManager = new CFLManager(this, allHosts, true,
-          config.mitosCheckpointingEnabled, config.mitosCheckpointInterval)
+          config.mitosCheckpointingEnabled, config.mitosCheckpointInterval, config.mitosCheckpointDir)
         //cflManager.tmId = 0
         //cflManager.numAllSlots = numberOfSlots
         //cflManager.numTaskSlotsPerTm = numberOfSlots
