@@ -19,6 +19,7 @@
 package eu.stratosphere.mitos;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.core.fs.FSDataOutputStream;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.memory.DataInputView;
@@ -54,7 +55,7 @@ import java.util.function.IntConsumer;
 /**
  *
  */
-public class CFLManager {
+public final class CFLManager {
 
 	protected static final Logger LOG = LoggerFactory.getLogger(CFLManager.class);
 
@@ -394,6 +395,8 @@ public class CFLManager {
 								voteStopRemote();
 							} else if (msg.stop != null) {
 								stopRemote();
+							} else if (msg.opSnapshotComplete != null) {
+								operatorSnapshotCompleteRemote(msg.opSnapshotComplete.checkpointId);
 							} else {
 								assert false;
 							}
@@ -480,12 +483,47 @@ public class CFLManager {
 		return curCFL.size() > 0 && curCFL.get(curCFL.size() - 1) == terminalBB;
 	}
 
-	private boolean decideCheckpoint(int cflSize) { // Note: it's NOT index. Index would be cflSize - 1.
-		// Note: cflSize has to be given as a parameter
-		return checkpointingEnabled && cflSize % checkpointInterval == 0;
+	AutoGrowArrayList<Boolean> checkpointDecisions = new AutoGrowArrayList<>(1000);
+	AutoGrowArrayList<Snapshot> snapshots = new AutoGrowArrayList<>(1000);
+
+	static final class Snapshot {
+		public AtomicInteger opsCompleted = new AtomicInteger(0);
 	}
 
-	public void initSnapshotting() {
+	private synchronized boolean decideCheckpoint(int cflSize) {
+		// Note: cflSize has to be given as a parameter
+		// Note: it's NOT index. Index would be cflSize - 1.
+
+		if (!checkpointingEnabled) {
+			return false;
+		} else {
+			if (checkpointDecisions.get(cflSize) == null) {
+				boolean decision = cflSize % checkpointInterval == 0;
+				checkpointDecisions.put(cflSize, decision);
+				if (decision) {
+					snapshots.put(cflSize, new Snapshot());
+					Path dir = getPathForCheckpointId(cflSize);
+					try {
+						snapshotFS.mkdirs(dir);
+					} catch (IOException e) {
+						throw new RuntimeException(e);
+					}
+				}
+			}
+			return checkpointDecisions.get(cflSize);
+		}
+	}
+
+	public Path getPathForCheckpointId(int id) {
+		return new Path(getCheckpointDir() + "/" + id);
+	}
+	public Path getCompletedPathForCheckpointId(int id) {
+		return new Path(getCheckpointDir() + "/" + id + "-complete");
+	}
+
+	public FileSystem snapshotFS;
+
+	public synchronized void initSnapshotting() {
 		LOG.info("initSnapshotting() -- " +
 			"checkpointingEnabled: " + checkpointingEnabled + ", " +
 			"checkpointInterval: " + checkpointInterval + ", " +
@@ -498,13 +536,13 @@ public class CFLManager {
 			//TODO
 			// - figyelni, hogy bizonyos dolgok itt csak akkor kellenek ha coordinator vagyunk
 			try {
-				FileSystem fs = FileSystem.get(new URI(checkpointDir));
+				snapshotFS = FileSystem.getUnguardedFileSystem(new URI(checkpointDir)); // This has to be unguarded because the KickoffSource's thread is gonna end soon, and then the ClosableRegistry is gonna close on us
 				Path checkpointDirPath = new Path(checkpointDir);
 				if (coordinator) {
-					fs.mkdirs(checkpointDirPath);
+					snapshotFS.mkdirs(checkpointDirPath);
 				}
-				if (true) { // TODO: dontes, hogy normal indulas vagy snapshotbol
-					//TODO: - create a dir for the job
+				if (true) { // TODO: dontes, hogy normal indulas vagy snapshotbol. Lehet, hogy ugy kene, hogy megnezzuk, hogy van-e dir (vagyis a fentebbit bemozgatni a then agba)
+
 				} else {
 					assert false; //todo
 				}
@@ -615,6 +653,9 @@ public class CFLManager {
 		numToSubscribe = null;
 
 		numVoteStops = 0;
+
+		checkpointDecisions.clear();
+		snapshots.clear();
 
 		jobCounter++;
 	}
@@ -995,6 +1036,33 @@ public class CFLManager {
 		reset();
 	}
 
+	public void operatorSnapshotCompleteLocal(int checkpointId) {
+		sendToCoordinator(new Msg(jobCounter, new OpSnapshotComplete(checkpointId)));
+	}
+
+	private void operatorSnapshotCompleteRemote(int checkpointId) {
+		assert checkpointDecisions.get(checkpointId) != null;
+		assert checkpointDecisions.get(checkpointId);
+
+		int numCompleted = snapshots.get(checkpointId).opsCompleted
+				.incrementAndGet();
+
+		if (numCompleted == numToSubscribe) {
+			try {
+				// Rename snapshot dir:
+				snapshotFS.rename(getPathForCheckpointId(checkpointId), getCompletedPathForCheckpointId(checkpointId));
+
+				// Record last completed snapshot:
+				FSDataOutputStream stream = snapshotFS.create(new Path(checkpointDir + "/lastComplete"), FileSystem.WriteMode.OVERWRITE);
+				DataOutputView dataOutputView = new DataOutputViewStreamWrapper(stream);
+				dataOutputView.writeInt(checkpointId);
+				stream.close();
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+	}
+
     // --------------------------------
 
     public static final class Msg {
@@ -1010,6 +1078,7 @@ public class CFLManager {
 		public BarrierAllReached barrierAllReached;
 		public VoteStop voteStop;
 		public Stop stop;
+		public OpSnapshotComplete opSnapshotComplete;
 
 
 		public void serialize(DataOutputView target) throws IOException {
@@ -1040,6 +1109,9 @@ public class CFLManager {
 			} else if (stop != null) {
 				target.writeByte(7);
 				stop.serialize(target);
+			} else if (opSnapshotComplete != null) {
+				target.writeByte(8);
+				opSnapshotComplete.serialize(target);
 			}
 		}
 
@@ -1084,6 +1156,10 @@ public class CFLManager {
 					r.stop = new Stop();
 					Stop.deserialize(r.stop, src);
 					break;
+				case 8:
+					r.opSnapshotComplete = new OpSnapshotComplete();
+					OpSnapshotComplete.deserialize(r.opSnapshotComplete, src);
+					break;
 			}
 		}
 
@@ -1099,6 +1175,7 @@ public class CFLManager {
 			if (barrierAllReached != null) c++;
 			if (voteStop != null) c++;
 			if (stop != null) c++;
+			if (opSnapshotComplete != null) c++;
 
 			if (c != 1) {
 				LOG.error("Corrupted msg: " + this.toString());
@@ -1148,6 +1225,11 @@ public class CFLManager {
 			this.stop = stop;
 		}
 
+		public Msg(short jobCounter, OpSnapshotComplete opSnapshotComplete) {
+			this.jobCounter = jobCounter;
+			this.opSnapshotComplete = opSnapshotComplete;
+		}
+
 		@Override
 		public String toString() {
 			return "Msg{" +
@@ -1160,6 +1242,7 @@ public class CFLManager {
 					", barrierAllReached=" + barrierAllReached +
 					", voteStop=" + voteStop +
 					", stop=" + stop +
+					", opSnapshotComplete=" + opSnapshotComplete +
 					'}';
 		}
 	}
@@ -1373,6 +1456,32 @@ public class CFLManager {
 
 		public static void deserialize(Stop r, DataInputView src) throws IOException {
 			// Nothing to do
+		}
+	}
+
+	public static class OpSnapshotComplete {
+
+		public int checkpointId;
+
+		public void serialize(DataOutputView target) throws IOException {
+			target.writeInt(checkpointId);
+		}
+
+		public static void deserialize(OpSnapshotComplete r, DataInputView src) throws IOException {
+			r.checkpointId = src.readInt();
+		}
+
+		public OpSnapshotComplete() {}
+
+		public OpSnapshotComplete(int checkpointId) {
+			this.checkpointId = checkpointId;
+		}
+
+		@Override
+		public String toString() {
+			return "OpSnapshotComplete{" +
+					"checkpointId=" + checkpointId +
+					'}';
 		}
 	}
 
