@@ -35,6 +35,8 @@ public interface CFLCallback {
 
 	void startFromSnapshot(int checkpointId, List<Integer> cfl);
 
+	void startNormally();
+
 
 	int getOpID();
 }

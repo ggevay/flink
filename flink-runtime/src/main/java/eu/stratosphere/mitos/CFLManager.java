@@ -575,6 +575,9 @@ public final class CFLManager {
 				Path checkpointDirPath = new Path(checkpointDir);
 				if (!snapshotFS.exists(checkpointDirPath)) {
 					LOG.info("Normal startup");
+					for (CFLCallback cb: callbacks) {
+						cb.startNormally();
+					}
 					if (coordinator) {
 						LOG.info("snapshotFS.mkdirs and appendToCFL(kickoffBBs): " + Arrays.toString(kickoffBBs));
 						snapshotFS.mkdirs(checkpointDirPath);
@@ -592,6 +595,9 @@ public final class CFLManager {
 				throw new RuntimeException(e);
 			}
 		} else {
+			for (CFLCallback cb: callbacks) {
+				cb.startNormally();
+			}
 			if (coordinator) {
 				appendToCFL(kickoffBBs);
 			}
@@ -642,7 +648,8 @@ public final class CFLManager {
 	}
 
 	private void tellOpToStartFromSnapshot(CFLCallback cb, int checkpointId) {
-		cb.startFromSnapshot(checkpointId, cflUptoCheckpoint);
+		ArrayList<Integer> cflToGive = new ArrayList<>(cflUptoCheckpoint);
+		cb.startFromSnapshot(checkpointId, cflToGive); // we have to copy because we give it to multiple operators, and some of them will modify it
 
 		for (int i = 0; i < cflAfterCheckpoint.size(); i++) {
 			cb.notifyCFLElement(cflAfterCheckpoint.get(i), false); // LP: we are not handling checkpoints soon after a restart
@@ -698,6 +705,8 @@ public final class CFLManager {
 
 		// Egyenkent elkuldjuk a notificationt mindegyik eddigirol
 		if (!didStartFromSnapshot) {
+			cb.startNormally();
+
 			for (int i = 0; i < curCFL.size(); i++) {
 				cb.notifyCFLElement(curCFL.get(i), checkpointDecisions.get(i + 1));
 			}
