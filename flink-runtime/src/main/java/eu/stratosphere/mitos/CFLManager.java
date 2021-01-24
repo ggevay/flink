@@ -397,6 +397,8 @@ public final class CFLManager {
 								stopRemote();
 							} else if (msg.opSnapshotComplete != null) {
 								operatorSnapshotCompleteRemote(msg.opSnapshotComplete.checkpointId);
+							} else if (msg.initSnapshotting != null) {
+								initSnapshottingRemote(msg.initSnapshotting.kickoffBBs);
 							} else {
 								assert false;
 							}
@@ -557,7 +559,11 @@ public final class CFLManager {
 
 	public FileSystem snapshotFS;
 
-	public synchronized void initSnapshotting() { //todo: make it return a boolean to decide whether to appendToCFL(kickoffBBs)
+	public void initSnapshottingLocal(int[] kickoffBBs) {
+		sendToEveryone(new Msg(jobCounter, new InitSnapshotting(kickoffBBs)));
+	}
+
+	public synchronized void initSnapshottingRemote(int[] kickoffBBs) { //todo: make it return a boolean to decide whether to appendToCFL(kickoffBBs)
 		LOG.info("initSnapshotting() -- " +
 			"checkpointingEnabled: " + checkpointingEnabled + ", " +
 			"checkpointInterval: " + checkpointInterval + ", " +
@@ -569,15 +575,23 @@ public final class CFLManager {
 				snapshotFS = FileSystem.getUnguardedFileSystem(new URI(checkpointDir)); // This has to be unguarded because the KickoffSource's thread is gonna end soon, and then the ClosableRegistry is gonna close on us
 				Path checkpointDirPath = new Path(checkpointDir);
 				if (coordinator) {
+					LOG.info("snapshotFS.mkdirs");
 					snapshotFS.mkdirs(checkpointDirPath);
 				}
 				if (true) { // TODO: dontes, hogy normal indulas vagy snapshotbol. Lehet, hogy ugy kene, hogy megnezzuk, hogy van-e dir (vagyis a fentebbit bemozgatni a then agba)
-
+					LOG.info("Normal startup, appending kickoffBBs: " + Arrays.toString(kickoffBBs));
+					if (coordinator) {
+						appendToCFL(kickoffBBs);
+					}
 				} else {
 					startFromSnapshot();
 				}
 			} catch (IOException | URISyntaxException e) {
 				throw new RuntimeException(e);
+			}
+		} else {
+			if (coordinator) {
+				appendToCFL(kickoffBBs);
 			}
 		}
 	}
@@ -587,6 +601,10 @@ public final class CFLManager {
 		// 1. Tell BagOps to read snapshot
 		// 2. Read CFL
 		// 3. Tell the CFL to the BagOps
+		//   - but send notify only for those that are after the checkpoint
+		//     - but then how do I tell the beginning of the CFL? Do I need to do that?
+		//       - maybe tell them in that callback which tells them to start from the snapshot
+		LOG.info("startFromSnapshot");
 	}
 
 	private String resolveNull(String str) {
@@ -1122,6 +1140,7 @@ public final class CFLManager {
 		public VoteStop voteStop;
 		public Stop stop;
 		public OpSnapshotComplete opSnapshotComplete;
+		public InitSnapshotting initSnapshotting;
 
 
 		public void serialize(DataOutputView target) throws IOException {
@@ -1155,6 +1174,9 @@ public final class CFLManager {
 			} else if (opSnapshotComplete != null) {
 				target.writeByte(8);
 				opSnapshotComplete.serialize(target);
+			} else if (initSnapshotting != null) {
+				target.writeByte(9);
+				initSnapshotting.serialize(target);
 			}
 		}
 
@@ -1203,6 +1225,9 @@ public final class CFLManager {
 					r.opSnapshotComplete = new OpSnapshotComplete();
 					OpSnapshotComplete.deserialize(r.opSnapshotComplete, src);
 					break;
+				case 9:
+					r.initSnapshotting = new InitSnapshotting();
+					InitSnapshotting.deserialize(r.initSnapshotting, src);
 			}
 		}
 
@@ -1219,6 +1244,7 @@ public final class CFLManager {
 			if (voteStop != null) c++;
 			if (stop != null) c++;
 			if (opSnapshotComplete != null) c++;
+			if (initSnapshotting != null) c++;
 
 			if (c != 1) {
 				LOG.error("Corrupted msg: " + this.toString());
@@ -1273,6 +1299,11 @@ public final class CFLManager {
 			this.opSnapshotComplete = opSnapshotComplete;
 		}
 
+		public Msg(short jobCounter, InitSnapshotting initSnapshotting) {
+			this.jobCounter = jobCounter;
+			this.initSnapshotting = initSnapshotting;
+		}
+
 		@Override
 		public String toString() {
 			return "Msg{" +
@@ -1286,6 +1317,7 @@ public final class CFLManager {
 					", voteStop=" + voteStop +
 					", stop=" + stop +
 					", opSnapshotComplete=" + opSnapshotComplete +
+					", initSnapshotting=" + initSnapshotting +
 					'}';
 		}
 	}
@@ -1525,6 +1557,39 @@ public final class CFLManager {
 			return "OpSnapshotComplete{" +
 					"checkpointId=" + checkpointId +
 					'}';
+		}
+	}
+
+	public static class InitSnapshotting {
+
+		public int[] kickoffBBs;
+
+		public void serialize(DataOutputView target) throws IOException {
+			target.writeInt(kickoffBBs.length);
+			for (int bbId: kickoffBBs) {
+				target.writeInt(bbId);
+			}
+		}
+
+		public static void deserialize(InitSnapshotting r, DataInputView src) throws IOException {
+			int length = src.readInt();
+			r.kickoffBBs = new int[length];
+			for (int i=0; i<length; i++) {
+				r.kickoffBBs[i] = src.readInt();
+			}
+		}
+
+		public InitSnapshotting() {}
+
+		public InitSnapshotting(int[] kickoffBBs) {
+			this.kickoffBBs = kickoffBBs;
+		}
+
+		@Override
+		public String toString() {
+			return "InitSnapshotting{" +
+				"kickoffBBs=" + Arrays.toString(kickoffBBs) +
+				'}';
 		}
 	}
 
