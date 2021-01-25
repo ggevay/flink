@@ -498,7 +498,7 @@ public final class CFLManager {
 		return curCFL.size() > 0 && curCFL.get(curCFL.size() - 1) == terminalBB;
 	}
 
-	AutoGrowArrayList<Boolean> checkpointDecisions = new AutoGrowArrayList<>(1000);
+	AutoGrowArrayList<Boolean> checkpointDecisions = new AutoGrowArrayList<>(1000); // Note: When restoring, false for everything upto the initial curCFL.size
 	AutoGrowArrayList<Snapshot> snapshots = new AutoGrowArrayList<>(1000);
 
 	static final class Snapshot {
@@ -620,9 +620,13 @@ public final class CFLManager {
 			DataInputView dataInputView = new DataInputViewStreamWrapper(stream);
 			int totalSize = dataInputView.readInt();
 			assert totalSize > checkpointId;
+			cflSendSeqNum = totalSize;
+			assert tentativeCFL.size() == 0;
 			assert curCFL.size() == 0;
 			for (int i = 0; i < totalSize; i++) {
-				curCFL.add(dataInputView.readInt());
+				int b = dataInputView.readInt();
+				tentativeCFL.add(b);
+				curCFL.add(b);
 			}
 			stream.close();
 			LOG.info("Read CFL from snapshot: " + Arrays.toString(curCFL.toArray()));
@@ -638,6 +642,10 @@ public final class CFLManager {
 			}
 
 			assert cflUptoCheckpoint.size() + cflAfterCheckpoint.size() == totalSize;
+
+			for (int i = 1; i <= totalSize; i++) { // mind the limits
+				checkpointDecisions.put(i, false);
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
