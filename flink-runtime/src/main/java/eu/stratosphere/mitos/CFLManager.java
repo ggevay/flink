@@ -399,7 +399,7 @@ public final class CFLManager {
 							} else if (msg.opSnapshotComplete != null) {
 								operatorSnapshotCompleteRemote(msg.opSnapshotComplete.checkpointId);
 							} else if (msg.initSnapshotting != null) {
-								initSnapshottingRemote(msg.initSnapshotting.kickoffBBs);
+								initSnapshottingRemote(msg.initSnapshotting.kickoffBBs, msg.initSnapshotting.restore);
 							} else {
 								assert false;
 							}
@@ -532,18 +532,20 @@ public final class CFLManager {
 
 	private void writeCurCflToSnapshot(int cflSize) {
 		try {
-			Path dir = getPathForCheckpointId(cflSize);
-			FileSystem.WriteMode writeMode = didStartFromSnapshot ? FileSystem.WriteMode.OVERWRITE : FileSystem.WriteMode.NO_OVERWRITE;
-			FSDataOutputStream stream = snapshotFS.create(getCflPathFromSnapshotDir(dir), writeMode);
-			DataOutputView dataOutputView = new DataOutputViewStreamWrapper(stream);
-			dataOutputView.writeInt(curCFL.size());
-			for (Integer b: curCFL) {
-				dataOutputView.writeInt(b);
-			}
-			stream.close();
-			snapshots.get(cflSize).cflWritten.set(true);
+			if (coordinator) {
+				Path dir = getPathForCheckpointId(cflSize);
+				FileSystem.WriteMode writeMode = didStartFromSnapshot ? FileSystem.WriteMode.OVERWRITE : FileSystem.WriteMode.NO_OVERWRITE;
+				FSDataOutputStream stream = snapshotFS.create(getCflPathFromSnapshotDir(dir), writeMode);
+				DataOutputView dataOutputView = new DataOutputViewStreamWrapper(stream);
+				dataOutputView.writeInt(curCFL.size());
+				for (Integer b : curCFL) {
+					dataOutputView.writeInt(b);
+				}
+				stream.close();
+				snapshots.get(cflSize).cflWritten.set(true);
 
-			checkSnapshotCompleteAndFinalize(cflSize);
+				checkSnapshotCompleteAndFinalize(cflSize);
+			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -561,20 +563,47 @@ public final class CFLManager {
 
 	public FileSystem snapshotFS;
 
-	public void initSnapshottingLocal(int[] kickoffBBs) {
-		sendToEveryone(new Msg(jobCounter, new InitSnapshotting(kickoffBBs)));
+	private synchronized void initSnapshotFS() {
+		if (checkpointingEnabled && snapshotFS == null) {
+			// This has to be unguarded because the KickoffSource's thread is gonna end soon, and
+			// then the ClosableRegistry is gonna close on us.
+			try {
+				snapshotFS = FileSystem.getUnguardedFileSystem(new URI(checkpointDir));
+			} catch (IOException | URISyntaxException e) {
+				throw new RuntimeException(e);
+			}
+		}
 	}
 
-	public synchronized void initSnapshottingRemote(int[] kickoffBBs) {
+	// This also makes the decision about restore and broadcasts it
+	public void initSnapshottingLocal(int[] kickoffBBs) {
+		try {
+			initSnapshotFS();
+
+			boolean restore;
+			if (!checkpointingEnabled) {
+				restore = false;
+			} else {
+				Path checkpointDirPath = new Path(checkpointDir);
+				restore = snapshotFS.exists(checkpointDirPath);
+			}
+
+			sendToEveryone(new Msg(jobCounter, new InitSnapshotting(kickoffBBs, restore)));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public synchronized void initSnapshottingRemote(int[] kickoffBBs, boolean restore) {
 		LOG.info("initSnapshotting() -- " +
 			"checkpointingEnabled: " + checkpointingEnabled + ", " +
 			"checkpointInterval: " + checkpointInterval + ", " +
 			"checkpointDir: " + resolveNull(checkpointDir));
 		if (checkpointingEnabled) {
 			try {
-				snapshotFS = FileSystem.getUnguardedFileSystem(new URI(checkpointDir)); // This has to be unguarded because the KickoffSource's thread is gonna end soon, and then the ClosableRegistry is gonna close on us
+				initSnapshotFS();
 				Path checkpointDirPath = new Path(checkpointDir);
-				if (!snapshotFS.exists(checkpointDirPath)) {
+				if (!restore) {
 					LOG.info("Normal startup");
 					for (CFLCallback cb: callbacks) {
 						cb.startNormally();
@@ -592,10 +621,10 @@ public final class CFLManager {
 
 					startFromSnapshot(checkpointId);
 				}
-			} catch (IOException | URISyntaxException e) {
+			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
-		} else {
+		} else { // Not enabled case. Important, because it appends kickoffBBs!
 			for (CFLCallback cb: callbacks) {
 				cb.startNormally();
 			}
@@ -1191,6 +1220,7 @@ public final class CFLManager {
 	}
 
 	private void checkSnapshotCompleteAndFinalize(int checkpointId) {
+		assert coordinator;
 		Snapshot s = snapshots.get(checkpointId);
 		if (s.opsCompleted.get() == numToSubscribe &&
 			s.cflWritten.get()
@@ -1650,12 +1680,14 @@ public final class CFLManager {
 	public static class InitSnapshotting {
 
 		public int[] kickoffBBs;
+		public boolean restore;
 
 		public void serialize(DataOutputView target) throws IOException {
 			target.writeInt(kickoffBBs.length);
 			for (int bbId: kickoffBBs) {
 				target.writeInt(bbId);
 			}
+			target.writeBoolean(restore);
 		}
 
 		public static void deserialize(InitSnapshotting r, DataInputView src) throws IOException {
@@ -1664,19 +1696,22 @@ public final class CFLManager {
 			for (int i=0; i<length; i++) {
 				r.kickoffBBs[i] = src.readInt();
 			}
+			r.restore = src.readBoolean();
 		}
 
 		public InitSnapshotting() {}
 
-		public InitSnapshotting(int[] kickoffBBs) {
+		public InitSnapshotting(int[] kickoffBBs, boolean restore) {
 			this.kickoffBBs = kickoffBBs;
+			this.restore = restore;
 		}
 
 		@Override
 		public String toString() {
 			return "InitSnapshotting{" +
-				"kickoffBBs=" + Arrays.toString(kickoffBBs) +
-				'}';
+					"kickoffBBs=" + Arrays.toString(kickoffBBs) +
+					", restore=" + restore +
+					'}';
 		}
 	}
 
