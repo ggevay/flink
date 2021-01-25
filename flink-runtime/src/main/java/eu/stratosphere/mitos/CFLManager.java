@@ -695,7 +695,7 @@ public final class CFLManager {
 		// Note: this will treat that part of the restored CFL that is after cflUptoCheckpoint, plus any blocks that
 		// have been added since the restart (in case when we are called from subscribe)
 		for (int i = cflUptoCheckpoint.size(); i < curCFL.size(); i++) {
-			cb.notifyCFLElement(curCFL.get(i), checkpointDecisions.get(i));
+			cb.notifyCFLElement(curCFL.get(i), checkpointDecisions.get(i + 1));
 		}
 
 		assert terminalBB != -1; // a drivernek be kell allitania a job elindulasa elott
