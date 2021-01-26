@@ -637,7 +637,6 @@ public final class CFLManager {
 	public boolean didStartFromSnapshot;
 	private int startedFromCheckpointId = -10;
 	private List<Integer> cflUptoCheckpoint;
-	//private List<Integer> cflAfterCheckpoint;
 
 	private synchronized void startFromSnapshot(int checkpointId) {
 		LOG.info("startFromSnapshot(" + checkpointId + ")");
@@ -666,13 +665,6 @@ public final class CFLManager {
 				cflUptoCheckpoint.add(curCFL.get(i));
 			}
 
-//			cflAfterCheckpoint = new ArrayList<>();
-//			for (int i = checkpointId; i < totalSize; i++) {
-//				cflAfterCheckpoint.add(curCFL.get(i));
-//			}
-//
-//			assert cflUptoCheckpoint.size() + cflAfterCheckpoint.size() == totalSize;
-
 			for (int i = 1; i <= totalSize; i++) { // mind the limits
 				checkpointDecisions.put(i, false);
 			}
@@ -689,9 +681,6 @@ public final class CFLManager {
 		ArrayList<Integer> cflToGive = new ArrayList<>(cflUptoCheckpoint);
 		cb.startFromSnapshot(checkpointId, cflToGive); // we have to copy because we give it to multiple operators, and some of them will modify it
 
-//		for (int i = 0; i < cflAfterCheckpoint.size(); i++) {
-//			cb.notifyCFLElement(cflAfterCheckpoint.get(i), false); // LP: we are not handling checkpoints soon after a restart
-//		}
 		// Note: this will treat that part of the restored CFL that is after cflUptoCheckpoint, plus any blocks that
 		// have been added since the restart (in case when we are called from subscribe)
 		for (int i = cflUptoCheckpoint.size(); i < curCFL.size(); i++) {
